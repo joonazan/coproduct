@@ -1,5 +1,6 @@
 use core::mem::ManuallyDrop;
-use std::marker::PhantomData;
+
+use crate::counter::{Here, There};
 
 pub union Union<A, B> {
     head: ManuallyDrop<A>,
@@ -69,28 +70,6 @@ impl<H, T: IndexedDrop> IndexedDrop for Union<H, T> {
 impl IndexedDrop for EmptyUnion {
     unsafe fn idrop(&mut self, _: u32) {
         match *self {}
-    }
-}
-
-pub struct Here;
-pub struct There<T>(PhantomData<T>);
-
-pub trait Counter {
-    fn count() -> u32;
-}
-
-impl Counter for Here {
-    fn count() -> u32 {
-        0
-    }
-}
-
-impl<N> Counter for There<N>
-where
-    N: Counter,
-{
-    fn count() -> u32 {
-        N::count() + 1
     }
 }
 

@@ -19,4 +19,5 @@
 //! unsafe.
 
 mod coproduct;
+mod counter;
 mod union;

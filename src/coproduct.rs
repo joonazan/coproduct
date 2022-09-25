@@ -1,4 +1,7 @@
-use crate::union::{Counter, IndexedClone, IndexedDrop, Injector};
+use crate::{
+    counter::Counter,
+    union::{IndexedClone, IndexedDrop, Injector},
+};
 
 /// Leaks memory if the contents are not Copy.
 ///
