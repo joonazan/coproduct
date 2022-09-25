@@ -1,6 +1,6 @@
 use core::mem::ManuallyDrop;
 
-use crate::counter::{Here, There};
+use crate::count::{Here, There};
 
 pub union Union<A, B> {
     head: ManuallyDrop<A>,
@@ -73,11 +73,11 @@ impl IndexedDrop for EmptyUnion {
     }
 }
 
-pub trait Injector<X, I> {
+pub trait Inject<X, I> {
     fn inject(x: X) -> Self;
 }
 
-impl<X, Rest> Injector<X, Here> for Union<X, Rest> {
+impl<X, Rest> Inject<X, Here> for Union<X, Rest> {
     fn inject(x: X) -> Self {
         Union {
             head: ManuallyDrop::new(x),
@@ -85,9 +85,9 @@ impl<X, Rest> Injector<X, Here> for Union<X, Rest> {
     }
 }
 
-impl<X, I, H, T> Injector<X, There<I>> for Union<H, T>
+impl<X, I, H, T> Inject<X, There<I>> for Union<H, T>
 where
-    T: Injector<X, I>,
+    T: Inject<X, I>,
 {
     fn inject(x: X) -> Self {
         Union {

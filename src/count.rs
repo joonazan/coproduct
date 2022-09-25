@@ -3,19 +3,19 @@ use std::marker::PhantomData;
 pub struct Here;
 pub struct There<T>(PhantomData<T>);
 
-pub trait Counter {
+pub trait Count {
     fn count() -> u32;
 }
 
-impl Counter for Here {
+impl Count for Here {
     fn count() -> u32 {
         0
     }
 }
 
-impl<N> Counter for There<N>
+impl<N> Count for There<N>
 where
-    N: Counter,
+    N: Count,
 {
     fn count() -> u32 {
         N::count() + 1

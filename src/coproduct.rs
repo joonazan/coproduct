@@ -1,6 +1,6 @@
 use crate::{
-    counter::Counter,
-    union::{IndexedClone, IndexedDrop, Injector},
+    count::Count,
+    union::{IndexedClone, IndexedDrop, Inject},
 };
 
 /// Leaks memory if the contents are not Copy.
@@ -19,10 +19,10 @@ trait CoproductWrapper {
     fn wrap(inner: LeakingCoproduct<Self::T>) -> Self;
 }
 
-impl<T, X, I> Injector<X, I> for LeakingCoproduct<T>
+impl<T, X, I> Inject<X, I> for LeakingCoproduct<T>
 where
-    I: Counter,
-    T: Injector<X, I>,
+    I: Count,
+    T: Inject<X, I>,
 {
     fn inject(x: X) -> Self {
         Self {
@@ -32,10 +32,10 @@ where
     }
 }
 
-impl<X, I, T, C> Injector<X, I> for C
+impl<X, I, T, C> Inject<X, I> for C
 where
-    I: Counter,
-    T: Injector<X, I>,
+    I: Count,
+    T: Inject<X, I>,
     C: CoproductWrapper<T = T>,
 {
     fn inject(x: X) -> Self {
