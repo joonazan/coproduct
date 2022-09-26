@@ -84,29 +84,6 @@ impl<T: IndexedDrop> Coproduct<T> {
     }
 }
 
-impl<I, T> Without<I> for LeakingCoproduct<T>
-where
-    T: Without<I>,
-{
-    type Pruned = LeakingCoproduct<T::Pruned>;
-}
-
-impl<I, T> Without<I> for CopyableCoproduct<T>
-where
-    T: Without<I> + Copy,
-    T::Pruned: Copy,
-{
-    type Pruned = CopyableCoproduct<T::Pruned>;
-}
-
-impl<I, T> Without<I> for Coproduct<T>
-where
-    T: Without<I> + IndexedDrop,
-    T::Pruned: IndexedDrop,
-{
-    type Pruned = Coproduct<T::Pruned>;
-}
-
 impl<Y> LeakingCoproduct<Y> {
     fn uninject<I, X>(self) -> Result<X, LeakingCoproduct<Y::Pruned>>
     where
