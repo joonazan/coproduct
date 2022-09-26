@@ -188,6 +188,14 @@ impl<T: Copy> CoproductWrapper<T> for CopyableCoproduct<T> {
 
 define_methods!(CopyableCoproduct, Copy);
 
+/// Builds a [CopyableCoproduct] that can hold the types given as arguments.
+#[macro_export]
+macro_rules! CopyableCoproduct {
+    ( $( $t:ty ),+ ) => (
+        $crate::CopyableCoproduct<$crate::MkUnion!( $( $t ),+ )>
+    );
+}
+
 /// This one supports types are not Copy. You should use CopyableCoproduct
 /// if possible.
 pub struct Coproduct<T: IndexedDrop>(LeakingCoproduct<T>);
@@ -215,6 +223,14 @@ impl<T: IndexedDrop> CoproductWrapper<T> for Coproduct<T> {
 }
 
 define_methods!(Coproduct, IndexedDrop);
+
+/// Builds a [Coproduct] that can hold the types given as arguments.
+#[macro_export]
+macro_rules! Coproduct {
+    ( $( $t:ty ),+ ) => (
+        $crate::Coproduct<$crate::MkUnion!( $( $t ),+ )>
+    );
+}
 
 #[cfg(test)]
 mod tests {

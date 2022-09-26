@@ -1,4 +1,4 @@
-use coproduct::{Coproduct, Count, Embed, EmptyUnion, IndexedDrop, Union};
+use coproduct::{Coproduct, Count, Embed, IndexedDrop, Union};
 
 fn transformer<T, I, Indices>(c: Coproduct<T>) -> Coproduct<Union<u32, T::Pruned>>
 where
@@ -14,7 +14,7 @@ where
 }
 
 fn main() {
-    let x: Coproduct<Union<String, Union<u8, EmptyUnion>>> = Coproduct::inject(8);
+    let x: Coproduct!(String, u8) = Coproduct::inject(8);
     dbg!(x.clone());
     let y = transformer(x);
     dbg!(y);

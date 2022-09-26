@@ -12,6 +12,12 @@ pub union Union<A, B> {
 #[derive(Copy, Clone, Debug)]
 pub enum EmptyUnion {}
 
+#[macro_export]
+macro_rules! MkUnion {
+    ($t: ty) => ($crate::Union<$t, $crate::EmptyUnion>);
+    ($h:ty, $($t:ty)+) => ($crate::Union<$h, $crate::MkUnion!($($t)+)>);
+}
+
 // Clone can only be implemented for unions where every variant is Copy.
 // It isn't possible to call the correct clone function without knowing
 // which variant is stored in the Union.
