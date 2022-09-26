@@ -117,35 +117,26 @@ impl IndexedEq for EmptyUnion {
     }
 }
 
-impl<X, Rest> Inject<X, Here> for Union<X, Rest> {
+impl<X, Rest> At<Here, X> for Union<X, Rest> {
     fn inject(x: X) -> Self {
         Union {
             head: ManuallyDrop::new(x),
         }
     }
+    unsafe fn take(self) -> X {
+        ManuallyDrop::into_inner(self.head)
+    }
 }
 
-impl<X, I, H, T> Inject<X, There<I>> for Union<H, T>
+impl<I, X, H, T> At<There<I>, X> for Union<H, T>
 where
-    T: Inject<X, I>,
+    T: At<I, X>,
 {
     fn inject(x: X) -> Self {
         Union {
             tail: ManuallyDrop::new(T::inject(x)),
         }
     }
-}
-
-impl<H, T> Take<H, Here> for Union<H, T> {
-    unsafe fn take(self) -> H {
-        ManuallyDrop::into_inner(self.head)
-    }
-}
-
-impl<H, T, X, I> Take<X, There<I>> for Union<H, T>
-where
-    T: Take<X, I>,
-{
     unsafe fn take(self) -> X {
         ManuallyDrop::into_inner(self.tail).take()
     }

@@ -10,13 +10,12 @@ pub trait IndexedDrop {
     unsafe fn idrop(&mut self, i: u32);
 }
 
-pub trait Inject<X, I> {
+/// This trait is implemented for Unions where variant I has type X.
+pub trait At<I, X> {
     /// Create a union that contains the given value.
     fn inject(x: X) -> Self;
-}
 
-/// Convert a union to the contained type.
-pub trait Take<X, I> {
+    /// Convert a union to the contained type.
     /// # Safety
     /// If the active variant of the coproduct is not at index I,
     /// calling this method is undefined behaviour.
@@ -24,5 +23,6 @@ pub trait Take<X, I> {
 }
 
 pub trait Without<I> {
+    /// The coproduct minus its Ith variant
     type Pruned;
 }

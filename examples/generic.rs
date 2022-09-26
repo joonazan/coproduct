@@ -1,8 +1,8 @@
-use coproduct::{Coproduct, Count, EmptyUnion, IndexedDrop, Inject, Union};
+use coproduct::{Coproduct, Count, EmptyUnion, IndexedDrop, Union};
 
 fn transformer<T, I>(c: Coproduct<T>) -> Coproduct<Union<u32, T::Pruned>>
 where
-    T: coproduct::Take<u8, I> + coproduct::Without<I> + IndexedDrop,
+    T: coproduct::At<I, u8> + coproduct::Without<I> + IndexedDrop,
     T::Pruned: IndexedDrop,
     I: Count,
 {

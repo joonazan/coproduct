@@ -51,12 +51,12 @@ where
     }
 }
 
-impl<T, X, I> Inject<X, I> for LeakingCoproduct<T>
-where
-    I: Count,
-    T: Inject<X, I>,
-{
-    fn inject(x: X) -> Self {
+impl<T> LeakingCoproduct<T> {
+    fn inject<I, X>(x: X) -> Self
+    where
+        I: Count,
+        T: At<I, X>,
+    {
         Self {
             tag: I::count(),
             union: T::inject(x),
@@ -64,14 +64,23 @@ where
     }
 }
 
-impl<X, I, T, C> Inject<X, I> for C
-where
-    I: Count,
-    T: Inject<X, I>,
-    C: CoproductWrapper<T = T>,
-{
-    fn inject(x: X) -> Self {
-        C::wrap(LeakingCoproduct::inject(x))
+impl<T: Copy> CopyableCoproduct<T> {
+    pub fn inject<I, X>(x: X) -> Self
+    where
+        I: Count,
+        T: At<I, X>,
+    {
+        Self::wrap(LeakingCoproduct::inject(x))
+    }
+}
+
+impl<T: IndexedDrop> Coproduct<T> {
+    pub fn inject<I, X>(x: X) -> Self
+    where
+        I: Count,
+        T: At<I, X>,
+    {
+        Self::wrap(LeakingCoproduct::inject(x))
     }
 }
 
@@ -99,9 +108,9 @@ where
 }
 
 impl<Y> LeakingCoproduct<Y> {
-    fn uninject<X, I>(self) -> Result<X, LeakingCoproduct<Y::Pruned>>
+    fn uninject<I, X>(self) -> Result<X, LeakingCoproduct<Y::Pruned>>
     where
-        Y: Without<I> + Take<X, I>,
+        Y: Without<I> + At<I, X>,
         I: Count,
     {
         if self.tag == I::count() {
@@ -121,9 +130,9 @@ impl<Y> LeakingCoproduct<Y> {
 }
 
 impl<Y: Copy> CopyableCoproduct<Y> {
-    pub fn uninject<X, I>(self) -> Result<X, CopyableCoproduct<Y::Pruned>>
+    pub fn uninject<I, X>(self) -> Result<X, CopyableCoproduct<Y::Pruned>>
     where
-        Y: Without<I> + Take<X, I>,
+        Y: Without<I> + At<I, X>,
         I: Count,
         Y::Pruned: Copy,
     {
@@ -132,9 +141,9 @@ impl<Y: Copy> CopyableCoproduct<Y> {
 }
 
 impl<Y: IndexedDrop> Coproduct<Y> {
-    pub fn uninject<X, I>(self) -> Result<X, Coproduct<Y::Pruned>>
+    pub fn uninject<I, X>(self) -> Result<X, Coproduct<Y::Pruned>>
     where
-        Y: Without<I> + Take<X, I>,
+        Y: Without<I> + At<I, X>,
         I: Count,
         Y::Pruned: IndexedDrop,
     {
