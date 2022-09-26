@@ -116,6 +116,7 @@ trait CoproductWrapper<T> {
 macro_rules! define_methods {
     ($type: ident, $trait: ident) => {
         impl<T: $trait> $type<T> {
+            /// Create a new coproduct that holds the given value.
             pub fn inject<I, X>(x: X) -> Self
             where
                 I: Count,
@@ -124,6 +125,31 @@ macro_rules! define_methods {
                 Self(LeakingCoproduct::inject(x))
             }
 
+            /// If the coproduct contains an X, returns that value.
+            /// Otherwise, returns the same coproduct, refined to indicate
+            /// that it cannot contain X.
+            ///
+            /// This method can be used to do exhaustive case analysis on a
+            /// coproduct:
+            ///  ```
+            /// # use coproduct::Coproduct;
+            /// # struct Cat;
+            /// # #[derive(Debug, PartialEq)]
+            /// # struct Dog(&'static str);
+            /// let animal: Coproduct!(Cat, Dog) = Coproduct::inject(Dog("Sparky"));
+            ///
+            /// let non_cat = match animal.uninject::<_, Cat>() {
+            ///     Ok(_) => unreachable!(),
+            ///     Err(non_cat) => non_cat,
+            /// };
+            /// match non_cat.uninject::<_, Dog>() {
+            ///     Ok(dog) => assert_eq!(dog, Dog("Sparky")),
+            ///     Err(non_animal) => {
+            ///         // There are animals other than cats and dogs? Absurd!
+            ///         non_animal.ex_falso()
+            ///     }
+            /// }
+            ///  ```
             pub fn uninject<I, X>(self) -> Result<X, $type<T::Pruned>>
             where
                 T: Without<I> + At<I, X>,
@@ -138,6 +164,16 @@ macro_rules! define_methods {
                 $type<U>: Embed<$type<T>, I>,
             {
                 <$type<U> as Embed<$type<T>, I>>::embed(self)
+            }
+        }
+
+        impl $type<EmptyUnion> {
+            /// From falsehood, anything follows.
+            ///
+            /// Given a coproduct that cannot contain anything,
+            /// just call this method.
+            pub fn ex_falso<T>(&self) -> T {
+                match self.0.union {}
             }
         }
 
@@ -167,7 +203,7 @@ macro_rules! define_methods {
     };
 }
 
-/// Use this whenever possible. It has strictly less code than Coproduct
+/// A coproduct that can only hold copyable types.
 #[derive(Copy, Clone)]
 pub struct CopyableCoproduct<T>(LeakingCoproduct<T>)
 where
@@ -196,8 +232,8 @@ macro_rules! CopyableCoproduct {
     );
 }
 
-/// This one supports types are not Copy. You should use CopyableCoproduct
-/// if possible.
+/// Can hold any type. You should use [CopyableCoproduct]
+/// if your types are copyable.
 pub struct Coproduct<T: IndexedDrop>(LeakingCoproduct<T>);
 
 impl<T: IndexedClone + IndexedDrop> Clone for Coproduct<T> {

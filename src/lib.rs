@@ -3,16 +3,16 @@
 //!
 //! For instance, the below function takes any coproduct that may contain a cat.
 //! ```
-//! fn is_cat<T, I>(maybe_cat: coproduct::Coproduct<T>) -> bool
+//! # use coproduct::{Coproduct, Count, IndexedDrop};
+//! # struct Cat;
+//! fn is_cat<T, I>(maybe_cat: Coproduct<T>) -> bool
 //! where
-//!     T: coproduct::At<I, Cat> + coproduct::Without<I> + coproduct::IndexedDrop,
-//!     I: coproduct::Count,
-//!     T::Pruned: coproduct::IndexedDrop,
+//!     T: coproduct::At<I, Cat> + coproduct::Without<I> + IndexedDrop,
+//!     I: Count,
+//!     T::Pruned: IndexedDrop,
 //! {
-//!     maybe_cat.uninject().is_ok()
+//!     maybe_cat.uninject::<_, Cat>().is_ok()
 //! }
-//!
-//! struct Cat;
 //! ```
 //!
 //! The coproducts take as much memory as the largest variant and 32 bits

@@ -2,7 +2,7 @@
 ///
 /// Unlike the other Indexed* traits, this one is exported because there is no
 /// way to avoid mentioning it. For example to require IndexedClone it suffices
-/// to write `Coproduct<T>: Clone`.
+/// to require that `Coproduct<T>` is [Clone].
 pub trait IndexedDrop {
     /// # Safety
     /// The argument `i` must be the index of the active variant
