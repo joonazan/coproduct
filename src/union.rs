@@ -1,6 +1,9 @@
 use core::mem::ManuallyDrop;
 
-use crate::count::{Here, There};
+use crate::{
+    count::{Here, There},
+    public_traits::*,
+};
 
 #[repr(C)]
 pub union Union<A, B> {
@@ -73,14 +76,6 @@ impl IndexedDebug for EmptyUnion {
     }
 }
 
-/// Trait for properly deallocating Unions that are not Copy.
-pub trait IndexedDrop {
-    /// # Safety
-    /// The argument `i` must be the index of the active variant
-    /// of the Union.
-    unsafe fn idrop(&mut self, i: u32);
-}
-
 impl<H, T: IndexedDrop> IndexedDrop for Union<H, T> {
     unsafe fn idrop(&mut self, i: u32) {
         if i == 0 {
@@ -122,11 +117,6 @@ impl IndexedEq for EmptyUnion {
     }
 }
 
-pub trait Inject<X, I> {
-    /// Create a union that contains the given value.
-    fn inject(x: X) -> Self;
-}
-
 impl<X, Rest> Inject<X, Here> for Union<X, Rest> {
     fn inject(x: X) -> Self {
         Union {
@@ -146,23 +136,15 @@ where
     }
 }
 
-/// Convert a union to the contained type.
-pub trait UnsafeTake<X, I> {
-    /// # Safety
-    /// If the active variant of the coproduct is not at index I,
-    /// calling this method is undefined behaviour.
-    unsafe fn take(self) -> X;
-}
-
-impl<H, T> UnsafeTake<H, Here> for Union<H, T> {
+impl<H, T> Take<H, Here> for Union<H, T> {
     unsafe fn take(self) -> H {
         ManuallyDrop::into_inner(self.head)
     }
 }
 
-impl<H, T, X, I> UnsafeTake<X, There<I>> for Union<H, T>
+impl<H, T, X, I> Take<X, There<I>> for Union<H, T>
 where
-    T: UnsafeTake<X, I>,
+    T: Take<X, I>,
 {
     unsafe fn take(self) -> X {
         ManuallyDrop::into_inner(self.tail).take()
@@ -191,10 +173,6 @@ where
         }
         .after,
     )
-}
-
-pub trait Without<I> {
-    type Pruned;
 }
 
 impl<H, T> Without<Here> for Union<H, T> {

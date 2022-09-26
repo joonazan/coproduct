@@ -1,8 +1,7 @@
 use crate::{
     count::Count,
-    union::{
-        prune, IndexedClone, IndexedDebug, IndexedDrop, IndexedEq, Inject, UnsafeTake, Without,
-    },
+    public_traits::*,
+    union::{prune, IndexedClone, IndexedDebug, IndexedEq},
 };
 
 /// Leaks memory if the contents are not Copy.
@@ -102,7 +101,7 @@ where
 impl<Y> LeakingCoproduct<Y> {
     fn uninject<X, I>(self) -> Result<X, LeakingCoproduct<Y::Pruned>>
     where
-        Y: Without<I> + UnsafeTake<X, I>,
+        Y: Without<I> + Take<X, I>,
         I: Count,
     {
         if self.tag == I::count() {
@@ -124,7 +123,7 @@ impl<Y> LeakingCoproduct<Y> {
 impl<Y: Copy> CopyableCoproduct<Y> {
     pub fn uninject<X, I>(self) -> Result<X, CopyableCoproduct<Y::Pruned>>
     where
-        Y: Without<I> + UnsafeTake<X, I>,
+        Y: Without<I> + Take<X, I>,
         I: Count,
         Y::Pruned: Copy,
     {
@@ -135,7 +134,7 @@ impl<Y: Copy> CopyableCoproduct<Y> {
 impl<Y: IndexedDrop> Coproduct<Y> {
     pub fn uninject<X, I>(self) -> Result<X, Coproduct<Y::Pruned>>
     where
-        Y: Without<I> + UnsafeTake<X, I>,
+        Y: Without<I> + Take<X, I>,
         I: Count,
         Y::Pruned: IndexedDrop,
     {
