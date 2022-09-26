@@ -2,7 +2,10 @@ use crate::{
     count::Count,
     public_traits::*,
     union::{union_transmute, IndexedClone, IndexedDebug, IndexedEq},
+    EmptyUnion, Union,
 };
+use core::mem::ManuallyDrop;
+use frunk::{HCons, HNil};
 
 /// Leaks memory if the contents are not Copy.
 ///
@@ -19,48 +22,10 @@ impl<X: IndexedDebug> core::fmt::Debug for LeakingCoproduct<X> {
     }
 }
 
-impl<T: IndexedDebug + Copy> core::fmt::Debug for CopyableCoproduct<T> {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        f.debug_tuple("CopyableCoproduct").field(&self.0).finish()
-    }
-}
-
-impl<T: IndexedDebug + IndexedDrop> core::fmt::Debug for Coproduct<T> {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        f.debug_tuple("Coproduct").field(&self.0).finish()
-    }
-}
-
 impl<T: IndexedEq> PartialEq for LeakingCoproduct<T> {
     fn eq(&self, other: &Self) -> bool {
         self.tag == other.tag && unsafe { self.union.ieq(&other.union, self.tag) }
     }
-}
-
-impl<T> PartialEq for CopyableCoproduct<T>
-where
-    T: IndexedEq + Copy,
-{
-    fn eq(&self, other: &Self) -> bool {
-        self.0 == other.0
-    }
-}
-
-impl<T> PartialEq for Coproduct<T>
-where
-    T: IndexedEq + IndexedDrop,
-{
-    fn eq(&self, other: &Self) -> bool {
-        self.0 == other.0
-    }
-}
-
-/// Implement traits on types implementing this trait to avoid writing
-/// everything for CopyableCoproduct and Coproduct separately
-trait CoproductWrapper {
-    type T;
-    fn wrap(inner: LeakingCoproduct<Self::T>) -> Self;
-    fn unwrap(self) -> LeakingCoproduct<Self::T>;
 }
 
 impl<T> LeakingCoproduct<T> {
@@ -94,44 +59,112 @@ impl<T> LeakingCoproduct<T> {
             })
         }
     }
-}
 
-impl<T: Copy> CopyableCoproduct<T> {
-    pub fn inject<I, X>(x: X) -> Self
+    fn embed<U, I>(self) -> LeakingCoproduct<U>
     where
-        I: Count,
-        T: At<I, X>,
+        LeakingCoproduct<U>: Embed<LeakingCoproduct<T>, I>,
     {
-        Self::wrap(LeakingCoproduct::inject(x))
-    }
-
-    pub fn uninject<I, X>(self) -> Result<X, CopyableCoproduct<T::Pruned>>
-    where
-        T: Without<I> + At<I, X>,
-        I: Count,
-        T::Pruned: Copy,
-    {
-        self.unwrap().uninject().map_err(CoproductWrapper::wrap)
+        Embed::embed(self)
     }
 }
 
-impl<T: IndexedDrop> Coproduct<T> {
-    pub fn inject<I, X>(x: X) -> Self
-    where
-        I: Count,
-        T: At<I, X>,
-    {
-        Self::wrap(LeakingCoproduct::inject(x))
-    }
+/// Implemented on Coproducts that Source can be embedded into.
+pub trait Embed<Source, Indices> {
+    fn embed(src: Source) -> Self;
+}
 
-    pub fn uninject<I, X>(self) -> Result<X, Coproduct<T::Pruned>>
-    where
-        T: Without<I> + At<I, X>,
-        I: Count,
-        T::Pruned: IndexedDrop,
-    {
-        self.unwrap().uninject().map_err(CoproductWrapper::wrap)
+impl<Res> Embed<LeakingCoproduct<EmptyUnion>, HNil> for Res {
+    fn embed(src: LeakingCoproduct<EmptyUnion>) -> Self {
+        match src.union {}
     }
+}
+
+impl<Res, IH, IT, H, T> Embed<LeakingCoproduct<Union<H, T>>, HCons<IH, IT>>
+    for LeakingCoproduct<Res>
+where
+    Res: At<IH, H>,
+    IH: Count,
+    LeakingCoproduct<Res>: Embed<LeakingCoproduct<T>, IT>,
+{
+    fn embed(src: LeakingCoproduct<Union<H, T>>) -> Self {
+        match src.take_head() {
+            Ok(x) => LeakingCoproduct::inject(x),
+            Err(x) => LeakingCoproduct::embed(x),
+        }
+    }
+}
+
+impl<H, T> LeakingCoproduct<Union<H, T>> {
+    fn take_head(self) -> Result<H, LeakingCoproduct<T>> {
+        if self.tag == 0 {
+            Ok(ManuallyDrop::into_inner(unsafe { self.union.head }))
+        } else {
+            Err(LeakingCoproduct {
+                tag: self.tag - 1,
+                union: ManuallyDrop::into_inner(unsafe { self.union.tail }),
+            })
+        }
+    }
+}
+
+/// Unwrapping is a bit more difficult for Coproduct than for CopyableCoproduct,
+/// so unwrap needs to be statically dispatched.
+trait CoproductWrapper<T> {
+    fn unwrap(self) -> LeakingCoproduct<T>;
+}
+
+macro_rules! define_methods {
+    ($type: ident, $trait: ident) => {
+        impl<T: $trait> $type<T> {
+            pub fn inject<I, X>(x: X) -> Self
+            where
+                I: Count,
+                T: At<I, X>,
+            {
+                Self(LeakingCoproduct::inject(x))
+            }
+
+            pub fn uninject<I, X>(self) -> Result<X, $type<T::Pruned>>
+            where
+                T: Without<I> + At<I, X>,
+                I: Count,
+                T::Pruned: $trait,
+            {
+                self.unwrap().uninject().map_err($type)
+            }
+
+            pub fn embed<U: $trait, I>(self) -> $type<U>
+            where
+                $type<U>: Embed<$type<T>, I>,
+            {
+                <$type<U> as Embed<$type<T>, I>>::embed(self)
+            }
+        }
+
+        impl<T: $trait, I, U: $trait> Embed<$type<T>, I> for $type<U>
+        where
+            LeakingCoproduct<U>: Embed<LeakingCoproduct<T>, I>,
+        {
+            fn embed(src: $type<T>) -> Self {
+                Self(src.unwrap().embed())
+            }
+        }
+
+        impl<T> PartialEq for $type<T>
+        where
+            T: IndexedEq + $trait,
+        {
+            fn eq(&self, other: &Self) -> bool {
+                self.0 == other.0
+            }
+        }
+
+        impl<T: IndexedDebug + $trait> core::fmt::Debug for $type<T> {
+            fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+                f.debug_tuple("Coproduct").field(&self.0).finish()
+            }
+        }
+    };
 }
 
 /// Use this whenever possible. It has strictly less code than Coproduct
@@ -147,17 +180,13 @@ impl<T: Copy> Clone for LeakingCoproduct<T> {
 }
 impl<T: Copy> Copy for LeakingCoproduct<T> {}
 
-impl<T: Copy> CoproductWrapper for CopyableCoproduct<T> {
-    type T = T;
-
-    fn wrap(inner: LeakingCoproduct<Self::T>) -> Self {
-        Self(inner)
-    }
-
-    fn unwrap(self) -> LeakingCoproduct<Self::T> {
+impl<T: Copy> CoproductWrapper<T> for CopyableCoproduct<T> {
+    fn unwrap(self) -> LeakingCoproduct<T> {
         self.0
     }
 }
+
+define_methods!(CopyableCoproduct, Copy);
 
 /// This one supports types are not Copy. You should use CopyableCoproduct
 /// if possible.
@@ -178,18 +207,14 @@ impl<T: IndexedDrop> Drop for Coproduct<T> {
     }
 }
 
-impl<T: IndexedDrop> CoproductWrapper for Coproduct<T> {
-    type T = T;
-
-    fn wrap(inner: LeakingCoproduct<Self::T>) -> Self {
-        Self(inner)
-    }
-
-    fn unwrap(self) -> LeakingCoproduct<Self::T> {
+impl<T: IndexedDrop> CoproductWrapper<T> for Coproduct<T> {
+    fn unwrap(self) -> LeakingCoproduct<T> {
         let me = core::mem::ManuallyDrop::new(self);
         unsafe { core::ptr::read(&me.0) }
     }
 }
+
+define_methods!(Coproduct, IndexedDrop);
 
 #[cfg(test)]
 mod tests {

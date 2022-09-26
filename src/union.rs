@@ -1,14 +1,12 @@
 use core::mem::ManuallyDrop;
+use frunk::indices::{Here, There};
 
-use crate::{
-    count::{Here, There},
-    public_traits::*,
-};
+use crate::public_traits::*;
 
 #[repr(C)]
 pub union Union<A, B> {
-    head: ManuallyDrop<A>,
-    tail: ManuallyDrop<B>,
+    pub(crate) head: ManuallyDrop<A>,
+    pub(crate) tail: ManuallyDrop<B>,
 }
 
 #[derive(Copy, Clone, Debug)]
@@ -142,25 +140,19 @@ where
     }
 }
 
-/// Removes one variant from a Union.
+/// Changes type to ANYTHING.
 /// # Safety
-/// This function is only safe to call if the variant removed
-/// is not active. Otherwise it will produce a Union in an invalid state.
-pub unsafe fn prune<T, I>(cp: T) -> T::Pruned
-where
-    T: Without<I>,
-{
+/// Only use this on repr(C) unions. The output union must contain the active
+/// variant of the input union.
+pub unsafe fn union_transmute<X, Y>(x: X) -> Y {
     #[repr(C)]
-    union Transmuter<T, Index>
-    where
-        T: Without<Index>,
-    {
-        before: ManuallyDrop<T>,
-        after: ManuallyDrop<T::Pruned>,
+    union Transmuter<A, B> {
+        before: ManuallyDrop<A>,
+        after: ManuallyDrop<B>,
     }
     ManuallyDrop::into_inner(
         Transmuter {
-            before: ManuallyDrop::new(cp),
+            before: ManuallyDrop::new(x),
         }
         .after,
     )
