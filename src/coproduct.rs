@@ -1,7 +1,7 @@
 use crate::{
     count::Count,
     public_traits::*,
-    union::{prune, IndexedClone, IndexedDebug, IndexedEq},
+    union::{union_transmute, IndexedClone, IndexedDebug, IndexedEq},
 };
 
 /// Leaks memory if the contents are not Copy.
@@ -19,12 +19,16 @@ impl<X: IndexedDebug> core::fmt::Debug for LeakingCoproduct<X> {
     }
 }
 
-/// Implement traits on types implementing this trait to avoid writing
-/// everything for CopyableCoproduct and Coproduct separately
-trait CoproductWrapper {
-    type T;
-    fn wrap(inner: LeakingCoproduct<Self::T>) -> Self;
-    fn unwrap(self) -> LeakingCoproduct<Self::T>;
+impl<T: IndexedDebug + Copy> core::fmt::Debug for CopyableCoproduct<T> {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        f.debug_tuple("CopyableCoproduct").field(&self.0).finish()
+    }
+}
+
+impl<T: IndexedDebug + IndexedDrop> core::fmt::Debug for Coproduct<T> {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        f.debug_tuple("Coproduct").field(&self.0).finish()
+    }
 }
 
 impl<T: IndexedEq> PartialEq for LeakingCoproduct<T> {
@@ -51,6 +55,14 @@ where
     }
 }
 
+/// Implement traits on types implementing this trait to avoid writing
+/// everything for CopyableCoproduct and Coproduct separately
+trait CoproductWrapper {
+    type T;
+    fn wrap(inner: LeakingCoproduct<Self::T>) -> Self;
+    fn unwrap(self) -> LeakingCoproduct<Self::T>;
+}
+
 impl<T> LeakingCoproduct<T> {
     fn inject<I, X>(x: X) -> Self
     where
@@ -62,32 +74,10 @@ impl<T> LeakingCoproduct<T> {
             union: T::inject(x),
         }
     }
-}
 
-impl<T: Copy> CopyableCoproduct<T> {
-    pub fn inject<I, X>(x: X) -> Self
+    fn uninject<I, X>(self) -> Result<X, LeakingCoproduct<T::Pruned>>
     where
-        I: Count,
-        T: At<I, X>,
-    {
-        Self::wrap(LeakingCoproduct::inject(x))
-    }
-}
-
-impl<T: IndexedDrop> Coproduct<T> {
-    pub fn inject<I, X>(x: X) -> Self
-    where
-        I: Count,
-        T: At<I, X>,
-    {
-        Self::wrap(LeakingCoproduct::inject(x))
-    }
-}
-
-impl<Y> LeakingCoproduct<Y> {
-    fn uninject<I, X>(self) -> Result<X, LeakingCoproduct<Y::Pruned>>
-    where
-        Y: Without<I> + At<I, X>,
+        T: Without<I> + At<I, X>,
         I: Count,
     {
         if self.tag == I::count() {
@@ -100,43 +90,47 @@ impl<Y> LeakingCoproduct<Y> {
             };
             Err(LeakingCoproduct {
                 tag,
-                union: unsafe { prune(self.union) },
+                union: unsafe { union_transmute(self.union) },
             })
         }
     }
 }
 
-impl<Y: Copy> CopyableCoproduct<Y> {
-    pub fn uninject<I, X>(self) -> Result<X, CopyableCoproduct<Y::Pruned>>
+impl<T: Copy> CopyableCoproduct<T> {
+    pub fn inject<I, X>(x: X) -> Self
     where
-        Y: Without<I> + At<I, X>,
         I: Count,
-        Y::Pruned: Copy,
+        T: At<I, X>,
+    {
+        Self::wrap(LeakingCoproduct::inject(x))
+    }
+
+    pub fn uninject<I, X>(self) -> Result<X, CopyableCoproduct<T::Pruned>>
+    where
+        T: Without<I> + At<I, X>,
+        I: Count,
+        T::Pruned: Copy,
     {
         self.unwrap().uninject().map_err(CoproductWrapper::wrap)
     }
 }
 
-impl<Y: IndexedDrop> Coproduct<Y> {
-    pub fn uninject<I, X>(self) -> Result<X, Coproduct<Y::Pruned>>
+impl<T: IndexedDrop> Coproduct<T> {
+    pub fn inject<I, X>(x: X) -> Self
     where
-        Y: Without<I> + At<I, X>,
         I: Count,
-        Y::Pruned: IndexedDrop,
+        T: At<I, X>,
+    {
+        Self::wrap(LeakingCoproduct::inject(x))
+    }
+
+    pub fn uninject<I, X>(self) -> Result<X, Coproduct<T::Pruned>>
+    where
+        T: Without<I> + At<I, X>,
+        I: Count,
+        T::Pruned: IndexedDrop,
     {
         self.unwrap().uninject().map_err(CoproductWrapper::wrap)
-    }
-}
-
-impl<T: IndexedDebug + Copy> core::fmt::Debug for CopyableCoproduct<T> {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        f.debug_tuple("CopyableCoproduct").field(&self.0).finish()
-    }
-}
-
-impl<T: IndexedDebug + IndexedDrop> core::fmt::Debug for Coproduct<T> {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        f.debug_tuple("Coproduct").field(&self.0).finish()
     }
 }
 
