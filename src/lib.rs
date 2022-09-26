@@ -1,9 +1,18 @@
 //! Rust enums are coproducts but the datastructure provided in this library
 //! allows writing functions that operate on generic coproducts.
 //!
-//! For instance, the below function takes any coproduct containing a cat.
+//! For instance, the below function takes any coproduct that may contain a cat.
 //! ```
-//! // TODO
+//! fn is_cat<T, I>(maybe_cat: coproduct::Coproduct<T>) -> bool
+//! where
+//!     T: coproduct::At<I, Cat> + coproduct::Without<I> + coproduct::IndexedDrop,
+//!     I: coproduct::Count,
+//!     T::Pruned: coproduct::IndexedDrop,
+//! {
+//!     maybe_cat.uninject().is_ok()
+//! }
+//!
+//! struct Cat;
 //! ```
 //!
 //! The coproducts take as much memory as the largest variant and 32 bits
