@@ -278,4 +278,10 @@ mod tests {
         let c = Coproduct::<Union<u8, EmptyUnion>>::inject(47);
         assert_eq!(c.uninject(), Ok(47));
     }
+
+    #[test]
+    fn leak_check() {
+        // This produces a memory leak detected by Miri if Drop doesn't work
+        let _: Coproduct!(String) = Coproduct::inject("hello".into());
+    }
 }
