@@ -213,7 +213,11 @@ macro_rules! define_methods {
             }
         }
 
-        impl<H: $trait, T: $trait> $type<Union<H, T>> {
+        impl<H, T> $type<Union<H, T>>
+        where
+            Union<H, T>: $trait,
+            T: $trait,
+        {
             /// Try to take the first variant out. On failure, return the
             /// remaining variants.
             pub fn take_head(self) -> Result<H, $type<T>> {
