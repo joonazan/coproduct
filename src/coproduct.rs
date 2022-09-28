@@ -93,6 +93,44 @@ where
     }
 }
 
+pub trait Split<Selection, Indices>: Sized {
+    type Remainder;
+
+    /// Extract a subset of the possible types in a coproduct (or get the remaining possibilities)
+    fn split(self) -> Result<Selection, Self::Remainder>;
+}
+
+impl<H, T, THead, TTail, NHead: Count, NTail, Rem>
+    Split<LeakingCoproduct<Union<THead, TTail>>, Union<NHead, NTail>>
+    for LeakingCoproduct<Union<H, T>>
+where
+    Union<H, T>: At<NHead, THead> + Without<NHead, Pruned = Rem>,
+    LeakingCoproduct<Rem>: Split<LeakingCoproduct<TTail>, NTail>,
+{
+    type Remainder = <LeakingCoproduct<Rem> as Split<LeakingCoproduct<TTail>, NTail>>::Remainder;
+
+    fn split(self) -> Result<LeakingCoproduct<Union<THead, TTail>>, Self::Remainder> {
+        match self.uninject::<NHead, THead>() {
+            Ok(found) => Ok(LeakingCoproduct::inject(found)),
+            Err(rest) => rest.split().map(|subset| LeakingCoproduct {
+                tag: subset.tag + 1,
+                union: Union {
+                    tail: ManuallyDrop::new(subset.union),
+                },
+            }),
+        }
+    }
+}
+
+impl<Choices> Split<LeakingCoproduct<EmptyUnion>, EmptyUnion> for Choices {
+    type Remainder = Self;
+
+    #[inline(always)]
+    fn split(self) -> Result<LeakingCoproduct<EmptyUnion>, Self::Remainder> {
+        Err(self)
+    }
+}
+
 impl<H, T> LeakingCoproduct<Union<H, T>> {
     fn take_head(self) -> Result<H, LeakingCoproduct<T>> {
         if self.tag == 0 {
@@ -158,11 +196,28 @@ macro_rules! define_methods {
                 self.unwrap().uninject().map_err($type)
             }
 
-            pub fn embed<U: $trait, I>(self) -> $type<U>
+            /// Convert a coproduct into another with more variants.
+            pub fn embed<U, I>(self) -> U
             where
-                $type<U>: Embed<$type<T>, I>,
+                U: Embed<Self, I>,
             {
-                <$type<U> as Embed<$type<T>, I>>::embed(self)
+                <U as Embed<Self, I>>::embed(self)
+            }
+
+            /// Split a coproduct into two disjoint sets. Returns the active one.
+            pub fn split<U, I>(self) -> Result<U, <Self as Split<U, I>>::Remainder>
+            where
+                Self: Split<U, I>,
+            {
+                <Self as Split<U, I>>::split(self)
+            }
+        }
+
+        impl<H: $trait, T: $trait> $type<Union<H, T>> {
+            /// Try to take the first variant out. On failure, return the
+            /// remaining variants.
+            pub fn take_head(self) -> Result<H, $type<T>> {
+                self.unwrap().take_head().map_err($type)
             }
         }
 
@@ -182,6 +237,18 @@ macro_rules! define_methods {
         {
             fn embed(src: $type<T>) -> Self {
                 Self(src.unwrap().embed())
+            }
+        }
+
+        impl<T: $trait, I, U: $trait, Rem> Split<$type<T>, I> for $type<U>
+        where
+            LeakingCoproduct<U>: Split<LeakingCoproduct<T>, I, Remainder = LeakingCoproduct<Rem>>,
+            Rem: $trait,
+        {
+            type Remainder = $type<Rem>;
+
+            fn split(self) -> Result<$type<T>, $type<Rem>> {
+                self.unwrap().split().map($type).map_err($type)
             }
         }
 
@@ -282,5 +349,12 @@ mod tests {
     fn leak_check() {
         // This produces a memory leak detected by Miri if Drop doesn't work
         let _: Coproduct!(String) = Coproduct::inject("hello".into());
+    }
+
+    #[test]
+    fn embed_split() {
+        let c: Coproduct!(u8, u16) = Coproduct::inject(42u16);
+        let widened: Coproduct!(u8, u16, u32, u64) = c.clone().embed();
+        assert_eq!(Ok(c), widened.split())
     }
 }
