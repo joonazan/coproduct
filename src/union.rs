@@ -14,7 +14,7 @@ pub enum EmptyUnion {}
 #[macro_export]
 macro_rules! MkUnion {
     ($t: ty) => ($crate::Union<$t, $crate::EmptyUnion>);
-    ($h:ty, $($t:ty)+) => ($crate::Union<$h, $crate::MkUnion!($($t)+)>);
+    ($h:ty, $($t:ty),+) => ($crate::Union<$h, $crate::MkUnion!($($t),+)>);
 }
 
 // Clone can only be implemented for unions where every variant is Copy.
