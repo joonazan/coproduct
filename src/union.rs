@@ -1,7 +1,6 @@
 use core::mem::ManuallyDrop;
-use frunk::indices::{Here, There};
 
-use crate::public_traits::*;
+use crate::{public_traits::*, Here, There};
 
 #[repr(C)]
 pub union Union<A, B> {

@@ -9,4 +9,3 @@ keywords = ["coproduct", "data-structure", "generic"]
 repository = "https://github.com/joonazan/coproduct"
 
 [dependencies]
-frunk = "0.4"

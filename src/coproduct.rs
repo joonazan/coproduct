@@ -5,7 +5,6 @@ use crate::{
     EmptyUnion, Union,
 };
 use core::mem::ManuallyDrop;
-use frunk::{HCons, HNil};
 
 /// Leaks memory if the contents are not Copy.
 ///
@@ -73,13 +72,13 @@ pub trait Embed<Source, Indices> {
     fn embed(src: Source) -> Self;
 }
 
-impl<Res> Embed<LeakingCoproduct<EmptyUnion>, HNil> for Res {
+impl<Res> Embed<LeakingCoproduct<EmptyUnion>, EmptyUnion> for Res {
     fn embed(src: LeakingCoproduct<EmptyUnion>) -> Self {
         match src.union {}
     }
 }
 
-impl<Res, IH, IT, H, T> Embed<LeakingCoproduct<Union<H, T>>, HCons<IH, IT>>
+impl<Res, IH, IT, H, T> Embed<LeakingCoproduct<Union<H, T>>, Union<IH, IT>>
     for LeakingCoproduct<Res>
 where
     Res: At<IH, H>,
