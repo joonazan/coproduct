@@ -41,7 +41,7 @@ impl<T> LeakingCoproduct<T> {
 
     fn uninject<I, X>(self) -> Result<X, LeakingCoproduct<T::Pruned>>
     where
-        T: Without<I> + At<I, X>,
+        T: At<I, X>,
         I: Count,
     {
         if self.tag == I::count() {
@@ -104,7 +104,7 @@ impl<H, T, THead, TTail, NHead: Count, NTail, Rem>
     Split<LeakingCoproduct<Union<THead, TTail>>, Union<NHead, NTail>>
     for LeakingCoproduct<Union<H, T>>
 where
-    Union<H, T>: At<NHead, THead> + Without<NHead, Pruned = Rem>,
+    Union<H, T>: At<NHead, THead, Pruned = Rem>,
     LeakingCoproduct<Rem>: Split<LeakingCoproduct<TTail>, NTail>,
 {
     type Remainder = <LeakingCoproduct<Rem> as Split<LeakingCoproduct<TTail>, NTail>>::Remainder;
@@ -189,7 +189,7 @@ macro_rules! define_methods {
             ///  ```
             pub fn uninject<I, X>(self) -> Result<X, $type<T::Pruned>>
             where
-                T: Without<I> + At<I, X>,
+                T: At<I, X>,
                 I: Count,
                 T::Pruned: $trait,
             {

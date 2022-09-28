@@ -20,9 +20,7 @@ pub trait At<I, X> {
     /// If the active variant of the coproduct is not at index I,
     /// calling this method is undefined behaviour.
     unsafe fn take(self) -> X;
-}
 
-pub trait Without<I> {
     /// The coproduct minus its Ith variant
     type Pruned;
 }

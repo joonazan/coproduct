@@ -7,7 +7,7 @@
 //! # struct Cat;
 //! fn is_cat<T, I>(maybe_cat: Coproduct<T>) -> bool
 //! where
-//!     T: coproduct::At<I, Cat> + coproduct::Without<I> + IndexedDrop,
+//!     T: coproduct::At<I, Cat> + IndexedDrop,
 //!     I: Count,
 //!     T::Pruned: IndexedDrop,
 //! {

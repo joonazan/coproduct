@@ -129,6 +129,8 @@ impl<X, Rest> At<Here, X> for Union<X, Rest> {
     unsafe fn take(self) -> X {
         ManuallyDrop::into_inner(self.head)
     }
+
+    type Pruned = Rest;
 }
 
 impl<I, X, H, T> At<There<I>, X> for Union<H, T>
@@ -143,6 +145,8 @@ where
     unsafe fn take(self) -> X {
         ManuallyDrop::into_inner(self.tail).take()
     }
+
+    type Pruned = Union<H, T::Pruned>;
 }
 
 /// Changes type to ANYTHING.
@@ -161,15 +165,4 @@ pub unsafe fn union_transmute<X, Y>(x: X) -> Y {
         }
         .after,
     )
-}
-
-impl<H, T> Without<Here> for Union<H, T> {
-    type Pruned = T;
-}
-
-impl<I, H, T> Without<There<I>> for Union<H, T>
-where
-    T: Without<I>,
-{
-    type Pruned = Union<H, T::Pruned>;
 }
