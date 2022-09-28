@@ -267,7 +267,7 @@ macro_rules! define_methods {
 
         impl<T: IndexedDebug + $trait> core::fmt::Debug for $type<T> {
             fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-                f.debug_tuple("Coproduct").field(&self.0).finish()
+                f.debug_tuple(stringify!($type)).field(&self.0).finish()
             }
         }
     };
