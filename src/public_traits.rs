@@ -11,7 +11,7 @@ pub trait IndexedDrop {
 }
 
 /// This trait is implemented for Unions where variant I has type X.
-pub trait At<I, X> {
+pub trait UnionAt<I, X> {
     /// Create a union that contains the given value.
     fn inject(x: X) -> Self;
 

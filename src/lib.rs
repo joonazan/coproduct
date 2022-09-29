@@ -5,13 +5,11 @@
 //! ```
 //! # use coproduct::{Coproduct, Count, IndexedDrop};
 //! # struct Cat;
-//! fn is_cat<T, I>(maybe_cat: Coproduct<T>) -> bool
+//! fn is_cat<C, I>(maybe_cat: C) -> bool
 //! where
-//!     T: coproduct::At<I, Cat> + IndexedDrop,
-//!     I: Count,
-//!     T::Pruned: IndexedDrop,
+//!     C: coproduct::At<I, Cat>,
 //! {
-//!     maybe_cat.uninject::<_, Cat>().is_ok()
+//!     maybe_cat.uninject().is_ok()
 //! }
 //! ```
 //!

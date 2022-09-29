@@ -1,20 +1,37 @@
-use coproduct::{Coproduct, Count, Embed, IndexedDrop, Union};
+use coproduct::{At, Coproduct, CopyableCoproduct, Count, Embed, IndexedDrop, Union};
 
-fn transformer<T, I, Indices>(c: Coproduct<T>) -> Coproduct<Union<u32, T::Pruned>>
+trait Prepend<T> {
+    type With;
+}
+
+impl<T, U: IndexedDrop> Prepend<T> for Coproduct<U> {
+    type With = Coproduct<Union<T, U>>;
+}
+
+impl<T: Copy, U: Copy> Prepend<T> for CopyableCoproduct<U> {
+    type With = CopyableCoproduct<Union<T, U>>;
+}
+
+fn transformer<C, I, J, Indices>(c: C) -> <<C as At<I, u8>>::Pruned as Prepend<u32>>::With
 where
-    T: coproduct::At<I, u8> + IndexedDrop,
-    T::Pruned: IndexedDrop,
-    Coproduct<Union<u32, T::Pruned>>: Embed<Coproduct<T::Pruned>, Indices>,
+    C: At<I, u8>,
+    C::Pruned: Prepend<u32> + Embed<<<C as At<I, u8>>::Pruned as Prepend<u32>>::With, Indices>,
+    <<C as At<I, u8>>::Pruned as Prepend<u32>>::With: At<J, u32>,
     I: Count,
 {
     match c.uninject() {
-        Ok(x) => Coproduct::inject(x as u32),
+        Ok(x) => coproduct::inject(x as u32),
         Err(x) => x.embed(),
     }
 }
 
 fn main() {
     let x: Coproduct!(String, u8) = Coproduct::inject(8);
+    dbg!(x.clone());
+    let y = transformer(x);
+    dbg!(y);
+
+    let x: CopyableCoproduct!(i32, u8) = CopyableCoproduct::inject(8);
     dbg!(x.clone());
     let y = transformer(x);
     dbg!(y);

@@ -27,23 +27,27 @@ impl<T: IndexedEq> PartialEq for LeakingCoproduct<T> {
     }
 }
 
-impl<T> LeakingCoproduct<T> {
-    fn inject<I, X>(x: X) -> Self
-    where
-        I: Count,
-        T: At<I, X>,
-    {
+pub trait At<I, X> {
+    fn inject(x: X) -> Self;
+
+    fn uninject(self) -> Result<X, Self::Pruned>;
+
+    type Pruned;
+}
+
+impl<I, X, U> At<I, X> for LeakingCoproduct<U>
+where
+    U: UnionAt<I, X>,
+    I: Count,
+{
+    fn inject(x: X) -> Self {
         Self {
             tag: I::count(),
-            union: T::inject(x),
+            union: U::inject(x),
         }
     }
 
-    fn uninject<I, X>(self) -> Result<X, LeakingCoproduct<T::Pruned>>
-    where
-        T: At<I, X>,
-        I: Count,
-    {
+    fn uninject(self) -> Result<X, Self::Pruned> {
         if self.tag == I::count() {
             Ok(unsafe { self.union.take() })
         } else {
@@ -59,36 +63,30 @@ impl<T> LeakingCoproduct<T> {
         }
     }
 
-    fn embed<U, I>(self) -> LeakingCoproduct<U>
-    where
-        LeakingCoproduct<U>: Embed<LeakingCoproduct<T>, I>,
-    {
-        Embed::embed(self)
-    }
+    type Pruned = LeakingCoproduct<U::Pruned>;
 }
 
 /// Implemented on Coproducts that Source can be embedded into.
-pub trait Embed<Source, Indices> {
-    fn embed(src: Source) -> Self;
+pub trait Embed<Target, Indices> {
+    fn embed(self) -> Target;
 }
 
-impl<Res> Embed<LeakingCoproduct<EmptyUnion>, EmptyUnion> for Res {
-    fn embed(src: LeakingCoproduct<EmptyUnion>) -> Self {
-        match src.union {}
+impl<Res> Embed<Res, EmptyUnion> for LeakingCoproduct<EmptyUnion> {
+    fn embed(self) -> Res {
+        match self.union {}
     }
 }
 
-impl<Res, IH, IT, H, T> Embed<LeakingCoproduct<Union<H, T>>, Union<IH, IT>>
-    for LeakingCoproduct<Res>
+impl<Res, IH, IT, H, T> Embed<Res, Union<IH, IT>> for LeakingCoproduct<Union<H, T>>
 where
     Res: At<IH, H>,
     IH: Count,
-    LeakingCoproduct<Res>: Embed<LeakingCoproduct<T>, IT>,
+    LeakingCoproduct<T>: Embed<Res, IT>,
 {
-    fn embed(src: LeakingCoproduct<Union<H, T>>) -> Self {
-        match src.take_head() {
-            Ok(x) => LeakingCoproduct::inject(x),
-            Err(x) => LeakingCoproduct::embed(x),
+    fn embed(self) -> Res {
+        match self.take_head() {
+            Ok(x) => Res::inject(x),
+            Err(x) => x.embed(),
         }
     }
 }
@@ -100,17 +98,16 @@ pub trait Split<Selection, Indices>: Sized {
     fn split(self) -> Result<Selection, Self::Remainder>;
 }
 
-impl<H, T, THead, TTail, NHead: Count, NTail, Rem>
-    Split<LeakingCoproduct<Union<THead, TTail>>, Union<NHead, NTail>>
-    for LeakingCoproduct<Union<H, T>>
+impl<ToSplit, THead, TTail, NHead: Count, NTail, Rem>
+    Split<LeakingCoproduct<Union<THead, TTail>>, Union<NHead, NTail>> for ToSplit
 where
-    Union<H, T>: At<NHead, THead, Pruned = Rem>,
-    LeakingCoproduct<Rem>: Split<LeakingCoproduct<TTail>, NTail>,
+    ToSplit: At<NHead, THead, Pruned = Rem>,
+    Rem: Split<LeakingCoproduct<TTail>, NTail>,
 {
-    type Remainder = <LeakingCoproduct<Rem> as Split<LeakingCoproduct<TTail>, NTail>>::Remainder;
+    type Remainder = <Rem as Split<LeakingCoproduct<TTail>, NTail>>::Remainder;
 
     fn split(self) -> Result<LeakingCoproduct<Union<THead, TTail>>, Self::Remainder> {
-        match self.uninject::<NHead, THead>() {
+        match self.uninject() {
             Ok(found) => Ok(LeakingCoproduct::inject(found)),
             Err(rest) => rest.split().map(|subset| LeakingCoproduct {
                 tag: subset.tag + 1,
@@ -122,7 +119,7 @@ where
     }
 }
 
-impl<Choices> Split<LeakingCoproduct<EmptyUnion>, EmptyUnion> for Choices {
+impl<ToSplit> Split<LeakingCoproduct<EmptyUnion>, EmptyUnion> for ToSplit {
     type Remainder = Self;
 
     #[inline(always)]
@@ -152,14 +149,30 @@ trait CoproductWrapper<T> {
 
 macro_rules! define_methods {
     ($type: ident, $trait: ident) => {
+        impl<I, X, U: $trait> At<I, X> for $type<U>
+        where
+            U: UnionAt<I, X>,
+            U::Pruned: $trait,
+            I: Count,
+        {
+            fn inject(x: X) -> Self {
+                $type(LeakingCoproduct::inject(x))
+            }
+
+            fn uninject(self) -> Result<X, Self::Pruned> {
+                self.unwrap().uninject().map_err($type)
+            }
+
+            type Pruned = $type<U::Pruned>;
+        }
+
         impl<T: $trait> $type<T> {
             /// Create a new coproduct that holds the given value.
             pub fn inject<I, X>(x: X) -> Self
             where
-                I: Count,
-                T: At<I, X>,
+                Self: At<I, X>,
             {
-                Self(LeakingCoproduct::inject(x))
+                <Self as At<I, X>>::inject(x)
             }
 
             /// If the coproduct contains an X, returns that value.
@@ -187,21 +200,19 @@ macro_rules! define_methods {
             ///     }
             /// }
             ///  ```
-            pub fn uninject<I, X>(self) -> Result<X, $type<T::Pruned>>
+            pub fn uninject<I, X>(self) -> Result<X, <Self as At<I, X>>::Pruned>
             where
-                T: At<I, X>,
-                I: Count,
-                T::Pruned: $trait,
+                Self: At<I, X>,
             {
-                self.unwrap().uninject().map_err($type)
+                <Self as At<I, X>>::uninject(self)
             }
 
             /// Convert a coproduct into another with more variants.
             pub fn embed<U, I>(self) -> U
             where
-                U: Embed<Self, I>,
+                Self: Embed<U, I>,
             {
-                <U as Embed<Self, I>>::embed(self)
+                <Self as Embed<U, I>>::embed(self)
             }
 
             /// Split a coproduct into two disjoint sets. Returns the active one.
@@ -239,8 +250,8 @@ macro_rules! define_methods {
         where
             LeakingCoproduct<U>: Embed<LeakingCoproduct<T>, I>,
         {
-            fn embed(src: $type<T>) -> Self {
-                Self(src.unwrap().embed())
+            fn embed(self) -> $type<T> {
+                $type(self.unwrap().embed())
             }
         }
 
@@ -329,6 +340,16 @@ impl<T: IndexedDrop> CoproductWrapper<T> for Coproduct<T> {
 }
 
 define_methods!(Coproduct, IndexedDrop);
+
+/// Create a coproduct containing X.
+/// This standalone function more convenient than the method or trait when
+/// writing very abstracted code.
+pub fn inject<I, X, C>(x: X) -> C
+where
+    C: At<I, X>,
+{
+    C::inject(x)
+}
 
 /// Builds a [Coproduct] that can hold the types given as arguments.
 #[macro_export]

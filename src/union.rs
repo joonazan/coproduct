@@ -120,7 +120,7 @@ impl IndexedEq for EmptyUnion {
     }
 }
 
-impl<X, Rest> At<Here, X> for Union<X, Rest> {
+impl<X, Rest> UnionAt<Here, X> for Union<X, Rest> {
     fn inject(x: X) -> Self {
         Union {
             head: ManuallyDrop::new(x),
@@ -133,9 +133,9 @@ impl<X, Rest> At<Here, X> for Union<X, Rest> {
     type Pruned = Rest;
 }
 
-impl<I, X, H, T> At<There<I>, X> for Union<H, T>
+impl<I, X, H, T> UnionAt<There<I>, X> for Union<H, T>
 where
-    T: At<I, X>,
+    T: UnionAt<I, X>,
 {
     fn inject(x: X) -> Self {
         Union {
