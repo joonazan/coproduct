@@ -5,7 +5,7 @@ where only a few variants differ? Usually that involves a lot of duplication
 and boilerplate. Not any more! Coproducts allow you to describe them and
 convert between them effortlessly!
 
-```
+```Rust
 use coproduct::{Coproduct, MkUnion, Union};
 
 #[derive(Debug)]
