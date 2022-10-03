@@ -151,8 +151,8 @@ where
 
 /// Changes type to ANYTHING.
 /// # Safety
-/// Only use this on repr(C) unions. The output union must contain the active
-/// variant of the input union.
+/// Only use this on repr(C) unions. The output union must be able to contain
+/// the active variant of the input union.
 pub unsafe fn union_transmute<X, Y>(x: X) -> Y {
     #[repr(C)]
     union Transmuter<A, B> {

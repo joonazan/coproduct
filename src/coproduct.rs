@@ -144,6 +144,9 @@ impl<H, T> LeakingCoproduct<Union<H, T>> {
 /// Unwrapping is a bit more difficult for Coproduct than for CopyableCoproduct,
 /// so unwrap needs to be statically dispatched.
 trait CoproductWrapper<T> {
+    // Returning a LeakingCoproduct doesn't cause leaks as it is private,
+    // which guarantees that library users won't get their hands on it.
+    // It will either be wrapped again or destroyed by the take method.
     fn unwrap(self) -> LeakingCoproduct<T>;
 }
 
@@ -342,6 +345,10 @@ impl<T: IndexedDrop> Drop for Coproduct<T> {
 
 impl<T: IndexedDrop> CoproductWrapper<T> for Coproduct<T> {
     fn unwrap(self) -> LeakingCoproduct<T> {
+        // As Coproduct is Drop, moving out of it isn't possible,
+        // which necessitates ptr::read.
+        // self needs to be wrapped in ManuallyDrop because otherwise it would
+        // be dropped here!
         let me = core::mem::ManuallyDrop::new(self);
         unsafe { core::ptr::read(&me.0) }
     }
