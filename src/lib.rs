@@ -27,6 +27,7 @@
 
 mod coproduct;
 mod count;
+mod merge;
 mod public_traits;
 mod union;
 
