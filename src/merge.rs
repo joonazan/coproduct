@@ -37,15 +37,8 @@ where
 // Present and NotPresent are used in tests/must_not_compile
 // but otherwise they are just implementation details
 
-#[cfg(trybuild)]
 pub struct Present<T>(T);
-#[cfg(not(trybuild))]
-struct Present<T>(T);
-
-#[cfg(trybuild)]
 pub struct NotPresent;
-#[cfg(not(trybuild))]
-struct NotPresent;
 
 trait DoesNotContain<X> {}
 
