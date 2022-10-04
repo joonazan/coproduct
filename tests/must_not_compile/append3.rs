@@ -1,15 +1,17 @@
 use coproduct::{
-    merge::{Append, NotPresent, TypeId},
-    Coproduct, Here, MkUnion, There,
+    merge::{Append, NotPresent},
+    type_inequality::{self, IdType},
+    Coproduct, MkUnion,
 };
+
 struct A;
-impl TypeId for A {
-    type Id = Here;
+impl IdType for A {
+    type Id = type_inequality::Zero<type_inequality::End>;
 }
 
 struct B;
-impl TypeId for B {
-    type Id = There<Here>;
+impl IdType for B {
+    type Id = type_inequality::One<type_inequality::End>;
 }
 
 type C = <MkUnion!(A, B) as Append<B, NotPresent>>::Extended;

@@ -1,4 +1,4 @@
-use crate::{EmptyUnion, Here, There, Union, UnionAt};
+use crate::{type_inequality::NotEqual, EmptyUnion, Union, UnionAt};
 
 pub trait Merge<Other, Ds> {
     type Merged;
@@ -58,30 +58,15 @@ where
 {
 }
 
-trait NotEqual<Other> {}
-
-impl<Other: TypeId, T: TypeId> NotEqual<Other> for T where T::Id: NotEqual<Other::Id> {}
-
-impl<X> NotEqual<Here> for There<X> {}
-impl<X> NotEqual<There<X>> for Here {}
-impl<A, B> NotEqual<There<A>> for There<B> where B: NotEqual<A> {}
-
-/// Used to test type inequality.
-///
-/// Because type equality does not need to rely on these,
-/// id collisions never cause wrong behaviour, just
-/// compilation failure. Two different types with the same
-/// id will fail to be equal and fail to be not equal.
-/// See `tests/must_not_compile/type_id_collision.rs` for an example.
-pub trait TypeId {
-    type Id;
-}
-
 #[cfg(test)]
 mod tests {
 
     use super::*;
-    use crate::{inject, Coproduct, Embed, IndexedDrop, MkUnion};
+    use crate::{
+        inject,
+        type_inequality::{self, IdType},
+        Coproduct, Embed, Here, IndexedDrop, MkUnion, There,
+    };
 
     #[test]
     fn compile_failures() {
@@ -90,13 +75,13 @@ mod tests {
     }
 
     struct A;
-    impl TypeId for A {
-        type Id = Here;
+    impl IdType for A {
+        type Id = type_inequality::Zero<type_inequality::End>;
     }
 
     struct B;
-    impl TypeId for B {
-        type Id = There<Here>;
+    impl IdType for B {
+        type Id = type_inequality::One<type_inequality::End>;
     }
 
     #[test]

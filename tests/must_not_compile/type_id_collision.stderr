@@ -1,7 +1,7 @@
 error[E0277]: the trait bound `coproduct::Union<B, EmptyUnion>: Append<A, _>` is not satisfied
-  --> tests/must_not_compile/type_id_collision.rs:19:22
+  --> tests/must_not_compile/type_id_collision.rs:20:22
    |
-19 |     let _: Coproduct<C<_>> = coproduct::inject(A);
+20 |     let _: Coproduct<C<_>> = coproduct::inject(A);
    |                      ^^^^ the trait `Append<A, _>` is not implemented for `coproduct::Union<B, EmptyUnion>`
    |
    = help: the trait `Merge<Other, coproduct::Union<Hd, Td>>` is implemented for `coproduct::Union<H, T>`

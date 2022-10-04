@@ -29,6 +29,7 @@ mod coproduct;
 mod count;
 pub mod merge;
 mod public_traits;
+pub mod type_inequality;
 mod union;
 
 pub use crate::coproduct::*;

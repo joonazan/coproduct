@@ -1,7 +1,7 @@
 error[E0277]: the trait bound `coproduct::Union<A, EmptyUnion>: UnionAt<Here, B>` is not satisfied
-  --> tests/must_not_compile/append2.rs:18:22
+  --> tests/must_not_compile/append2.rs:20:22
    |
-18 |     let _: Coproduct<C> = coproduct::inject(A);
+20 |     let _: Coproduct<C> = coproduct::inject(A);
    |                      ^ the trait `UnionAt<Here, B>` is not implemented for `coproduct::Union<A, EmptyUnion>`
    |
    = help: the following other types implement trait `UnionAt<I, X>`:

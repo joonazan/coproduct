@@ -1,16 +1,17 @@
 use coproduct::{
-    merge::{Merge, TypeId},
-    Coproduct, Here, MkUnion,
+    type_inequality::{self, IdType},
+    Coproduct, Merge, MkUnion,
 };
+
 struct A;
-impl TypeId for A {
-    type Id = Here;
+impl IdType for A {
+    type Id = type_inequality::Zero<type_inequality::End>;
 }
 
 struct B;
-impl TypeId for B {
-    // Same as the type id for A!
-    type Id = Here;
+impl IdType for B {
+    // same Id as A!
+    type Id = type_inequality::Zero<type_inequality::End>;
 }
 
 type C<Ds> = <MkUnion!(A) as Merge<MkUnion!(B), Ds>>::Merged;
