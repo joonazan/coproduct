@@ -33,6 +33,7 @@ pub mod type_inequality;
 mod union;
 
 pub use crate::coproduct::*;
+pub use coproduct_idtype_macro::*;
 pub use count::*;
 pub use merge::Merge;
 pub use public_traits::*;
