@@ -66,6 +66,13 @@ impl<X> NotEqual<Here> for There<X> {}
 impl<X> NotEqual<There<X>> for Here {}
 impl<A, B> NotEqual<There<A>> for There<B> where B: NotEqual<A> {}
 
+/// Used to test type inequality.
+///
+/// Because type equality does not need to rely on these,
+/// id collisions never cause wrong behaviour, just
+/// compilation failure. Two different types with the same
+/// id will fail to be equal and fail to be not equal.
+/// See `tests/must_not_compile/type_id_collision.rs` for an example.
 pub trait TypeId {
     type Id;
 }
