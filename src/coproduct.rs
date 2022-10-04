@@ -2,7 +2,7 @@ use crate::{
     count::Count,
     public_traits::*,
     union::{union_transmute, IndexedClone, IndexedDebug, IndexedEq},
-    EmptyUnion, Union,
+    EmptyUnion, Merge, Union,
 };
 use core::mem::ManuallyDrop;
 
@@ -265,6 +265,14 @@ macro_rules! define_methods {
             fn split(self) -> Result<$type<T>, $type<Rem>> {
                 self.unwrap().split().map($type).map_err($type)
             }
+        }
+
+        impl<T: $trait, U: $trait, Ds> Merge<$type<T>, Ds> for $type<U>
+        where
+            U: Merge<T, Ds>,
+            U::Merged: $trait,
+        {
+            type Merged = $type<U::Merged>;
         }
 
         impl<T> PartialEq for $type<T>
