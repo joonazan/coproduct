@@ -1,7 +1,5 @@
-use std::marker::PhantomData;
-
 pub struct Here;
-pub struct There<T>(PhantomData<T>);
+pub struct There<T>(T);
 
 pub trait Count {
     fn count() -> u32;
