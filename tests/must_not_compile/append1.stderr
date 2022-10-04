@@ -1,0 +1,14 @@
+error[E0277]: the trait bound `Here: coproduct::merge::TypeId` is not satisfied
+  --> tests/must_not_compile/append1.rs:18:22
+   |
+18 |     let _: Coproduct<C> = coproduct::inject(A);
+   |                      ^ the trait `coproduct::merge::TypeId` is not implemented for `Here`
+   |
+   = help: the following other types implement trait `coproduct::merge::TypeId`:
+             A
+             B
+   = note: required for `Here` to implement `merge::NotEqual<Here>`
+   = note: 1 redundant requirement hidden
+   = note: required for `A` to implement `merge::NotEqual<A>`
+   = note: required for `coproduct::Union<A, EmptyUnion>` to implement `merge::DoesNotContain<A>`
+   = note: required for `coproduct::Union<A, EmptyUnion>` to implement `Append<A, coproduct::merge::NotPresent>`

@@ -27,11 +27,12 @@
 
 mod coproduct;
 mod count;
-mod merge;
+pub mod merge;
 mod public_traits;
 mod union;
 
 pub use crate::coproduct::*;
 pub use count::*;
+pub use merge::Merge;
 pub use public_traits::*;
 pub use union::{EmptyUnion, Union};

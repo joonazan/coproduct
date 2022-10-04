@@ -1,0 +1,14 @@
+error[E0277]: the trait bound `There<Here>: merge::NotEqual<There<Here>>` is not satisfied
+  --> tests/must_not_compile/append3.rs:18:22
+   |
+18 |     let _: Coproduct<C> = coproduct::inject(A);
+   |                      ^ the trait `merge::NotEqual<There<Here>>` is not implemented for `There<Here>`
+   |
+   = help: the following other types implement trait `merge::NotEqual<Other>`:
+             <There<B> as merge::NotEqual<There<A>>>
+             <There<X> as merge::NotEqual<Here>>
+   = note: required for `B` to implement `merge::NotEqual<B>`
+   = note: required for `coproduct::Union<B, EmptyUnion>` to implement `merge::DoesNotContain<B>`
+   = note: 1 redundant requirement hidden
+   = note: required for `coproduct::Union<A, coproduct::Union<B, EmptyUnion>>` to implement `merge::DoesNotContain<B>`
+   = note: required for `coproduct::Union<A, coproduct::Union<B, EmptyUnion>>` to implement `Append<B, coproduct::merge::NotPresent>`

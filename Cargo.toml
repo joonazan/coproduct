@@ -11,3 +11,6 @@ documentation = "https://docs.rs/coproduct"
 readme = "README.md"
 
 [dependencies]
+
+[dev-dependencies]
+trybuild = "1.0"

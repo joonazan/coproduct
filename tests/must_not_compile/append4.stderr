@@ -1,0 +1,11 @@
+error[E0277]: the trait bound `coproduct::Union<B, EmptyUnion>: UnionAt<Here, A>` is not satisfied
+  --> tests/must_not_compile/append4.rs:18:22
+   |
+18 |     let _: Coproduct<C> = coproduct::inject(A);
+   |                      ^ the trait `UnionAt<Here, A>` is not implemented for `coproduct::Union<B, EmptyUnion>`
+   |
+   = help: the following other types implement trait `UnionAt<I, X>`:
+             <coproduct::Union<H, T> as UnionAt<There<I>, X>>
+             <coproduct::Union<X, Rest> as UnionAt<Here, X>>
+   = note: required for `coproduct::Union<A, coproduct::Union<B, EmptyUnion>>` to implement `UnionAt<There<Here>, A>`
+   = note: required for `coproduct::Union<A, coproduct::Union<B, EmptyUnion>>` to implement `Append<A, Present<There<Here>>>`

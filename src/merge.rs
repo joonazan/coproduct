@@ -1,6 +1,6 @@
 use crate::{EmptyUnion, Here, There, Union, UnionAt};
 
-trait Merge<Other, Ds> {
+pub trait Merge<Other, Ds> {
     type Merged;
 }
 
@@ -16,7 +16,7 @@ impl<Other> Merge<Other, EmptyUnion> for EmptyUnion {
     type Merged = Other;
 }
 
-trait Append<X, D> {
+pub trait Append<X, D> {
     type Extended;
 }
 
@@ -34,7 +34,17 @@ where
     type Extended = Union<X, T>;
 }
 
+// Present and NotPresent are used in tests/must_not_compile
+// but otherwise they are just implementation details
+
+#[cfg(trybuild)]
+pub struct Present<T>(T);
+#[cfg(not(trybuild))]
 struct Present<T>(T);
+
+#[cfg(trybuild)]
+pub struct NotPresent;
+#[cfg(not(trybuild))]
 struct NotPresent;
 
 trait DoesNotContain<X> {}
@@ -56,7 +66,7 @@ impl<X> NotEqual<Here> for There<X> {}
 impl<X> NotEqual<There<X>> for Here {}
 impl<A, B> NotEqual<There<A>> for There<B> where B: NotEqual<A> {}
 
-trait TypeId {
+pub trait TypeId {
     type Id;
 }
 
@@ -65,6 +75,12 @@ mod tests {
 
     use super::*;
     use crate::{inject, Coproduct, Embed, IndexedDrop, MkUnion};
+
+    #[test]
+    fn compile_failures() {
+        let t = trybuild::TestCases::new();
+        t.compile_fail("tests/must_not_compile/*.rs");
+    }
 
     struct A;
     impl TypeId for A {
@@ -78,13 +94,9 @@ mod tests {
 
     #[test]
     fn append() {
-        // must not compile:
-        // type C = <Union<A, EmptyUnion> as Append<A, NotPresent>>::Extended;
         type C = <Union<A, EmptyUnion> as Append<B, NotPresent>>::Extended;
         let _c: Coproduct<C> = inject(A);
 
-        // must not compile:
-        //type C2 = <MkUnion!(A, B) as Append<B, NotPresent>>::Extended;
         type C2 = <MkUnion!(A, B) as Append<B, Present<There<Here>>>>::Extended;
         let _c: Coproduct<C2> = inject(A);
     }
