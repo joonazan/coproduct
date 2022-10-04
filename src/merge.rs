@@ -62,6 +62,7 @@ mod tests {
     };
 
     #[test]
+    #[cfg_attr(miri, ignore)]
     fn compile_failures() {
         let t = trybuild::TestCases::new();
         t.compile_fail("tests/must_not_compile/*.rs");
