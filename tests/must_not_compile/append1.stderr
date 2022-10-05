@@ -1,7 +1,7 @@
-error[E0271]: type mismatch resolving `<A as type_inequality::Compare<A>>::EQUAL == false`
-  --> tests/must_not_compile/append1.rs:15:22
+error[E0271]: type mismatch resolving `<A as coproduct::type_inequality::Compare<A>>::EQUAL == false`
+  --> tests/must_not_compile/append1.rs:11:22
    |
-15 |     let _: Coproduct<C> = coproduct::inject(A);
+11 |     let _: Coproduct<C> = coproduct::inject(A);
    |                      ^ expected `true`, found `false`
    |
    = note: expected constant `true`

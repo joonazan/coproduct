@@ -11,7 +11,6 @@ documentation = "https://docs.rs/coproduct"
 readme = "README.md"
 
 [dependencies]
-coproduct-idtype-macro = {path = "idtype_macro", version = "0.1"}
 
 [dev-dependencies]
 trybuild = "1.0"

@@ -1,4 +1,5 @@
 #![feature(associated_const_equality)]
+#![feature(const_type_id)]
 
 //! Rust enums are coproducts but the datastructure provided in this library
 //! allows writing functions that operate on generic coproducts.
@@ -31,12 +32,12 @@ mod coproduct;
 mod count;
 pub mod merge;
 mod public_traits;
-pub mod type_inequality;
+mod type_inequality;
 mod union;
 
 pub use crate::coproduct::*;
-pub use coproduct_idtype_macro::*;
 pub use count::*;
 pub use merge::Merge;
 pub use public_traits::*;
+pub use type_inequality::NotEqual;
 pub use union::{EmptyUnion, Union};

@@ -1,4 +1,4 @@
-use crate::{type_inequality::NotEqual, EmptyUnion, Union, UnionAt};
+use crate::{EmptyUnion, NotEqual, Union, UnionAt};
 
 pub trait Merge<Other, Ds> {
     type Merged;
@@ -55,9 +55,7 @@ where
 mod tests {
 
     use super::*;
-    use crate::{
-        inject, type_inequality::IdType, Coproduct, Embed, Here, IndexedDrop, MkUnion, There,
-    };
+    use crate::{inject, Coproduct, Embed, Here, IndexedDrop, MkUnion, There};
 
     #[test]
     #[cfg_attr(miri, ignore)]
@@ -67,14 +65,7 @@ mod tests {
     }
 
     struct A;
-    impl IdType for A {
-        const ID: u64 = 0;
-    }
-
     struct B;
-    impl IdType for B {
-        const ID: u64 = 1;
-    }
 
     #[test]
     fn append() {
