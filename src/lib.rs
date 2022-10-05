@@ -1,6 +1,5 @@
-#![feature(associated_const_equality)]
-#![feature(const_type_id)]
-
+#![cfg_attr(feature = "type_inequality_hack", feature(associated_const_equality))]
+#![cfg_attr(feature = "type_inequality_hack", feature(const_type_id))]
 //! Rust enums are coproducts but the datastructure provided in this library
 //! allows writing functions that operate on generic coproducts.
 //!
@@ -30,14 +29,19 @@
 
 mod coproduct;
 mod count;
-pub mod merge;
 mod public_traits;
-mod type_inequality;
 mod union;
 
 pub use crate::coproduct::*;
 pub use count::*;
-pub use merge::Merge;
 pub use public_traits::*;
-pub use type_inequality::NotEqual;
 pub use union::{EmptyUnion, Union};
+
+#[cfg(feature = "type_inequality_hack")]
+mod type_inequality;
+#[cfg(feature = "type_inequality_hack")]
+pub use type_inequality::NotEqual;
+#[cfg(feature = "type_inequality_hack")]
+pub mod merge;
+#[cfg(feature = "type_inequality_hack")]
+pub use merge::Merge;

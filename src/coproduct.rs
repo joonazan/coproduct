@@ -2,9 +2,12 @@ use crate::{
     count::Count,
     public_traits::*,
     union::{union_transmute, IndexedClone, IndexedDebug, IndexedEq},
-    EmptyUnion, Merge, Union,
+    EmptyUnion, Union,
 };
 use core::mem::ManuallyDrop;
+
+#[cfg(feature = "type_inequality_hack")]
+use crate::Merge;
 
 /// Leaks memory if the contents are not Copy.
 ///
@@ -270,6 +273,7 @@ macro_rules! define_methods {
             }
         }
 
+        #[cfg(feature = "type_inequality_hack")]
         impl<T: $trait, U: $trait, Ds> Merge<$type<T>, Ds> for $type<U>
         where
             U: Merge<T, Ds>,
