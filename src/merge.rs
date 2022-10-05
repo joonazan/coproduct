@@ -56,9 +56,7 @@ mod tests {
 
     use super::*;
     use crate::{
-        inject,
-        type_inequality::{self, IdType},
-        Coproduct, Embed, Here, IndexedDrop, MkUnion, There,
+        inject, type_inequality::IdType, Coproduct, Embed, Here, IndexedDrop, MkUnion, There,
     };
 
     #[test]
@@ -70,12 +68,12 @@ mod tests {
 
     struct A;
     impl IdType for A {
-        type Id = type_inequality::Zero<type_inequality::End>;
+        const ID: u64 = 0;
     }
 
     struct B;
     impl IdType for B {
-        type Id = type_inequality::One<type_inequality::End>;
+        const ID: u64 = 1;
     }
 
     #[test]

@@ -19,26 +19,12 @@ pub fn idtype_derive(raw_input: TokenStream) -> TokenStream {
 
     let name = input.ident;
     let (impl_generics, ty_generics, where_clause) = input.generics.split_for_impl();
-    let id = to_idtype(hash);
     quote! {
         impl #impl_generics ::coproduct::type_inequality::IdType
             for #name #ty_generics #where_clause {
 
-            type Id = #id;
+            const ID: u64 = #hash;
         }
     }
     .into()
-}
-
-fn to_idtype(x: u64) -> impl quote::ToTokens {
-    if x == 0 {
-        quote!(::coproduct::type_inequality::End)
-    } else {
-        let rest = to_idtype(x >> 1);
-        if x & 1 == 0 {
-            quote!(::coproduct::type_inequality::Zero<#rest>)
-        } else {
-            quote!(::coproduct::type_inequality::One<#rest>)
-        }
-    }
 }

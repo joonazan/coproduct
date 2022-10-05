@@ -1,3 +1,5 @@
+#![feature(associated_const_equality)]
+
 //! Rust enums are coproducts but the datastructure provided in this library
 //! allows writing functions that operate on generic coproducts.
 //!

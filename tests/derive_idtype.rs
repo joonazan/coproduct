@@ -5,7 +5,7 @@ struct A;
 #[derive(IdType)]
 struct B;
 
-fn require_not_equal<A, B>(_: A, _: B)
+fn require_not_equal<A, B>()
 where
     A: NotEqual<B>,
 {
@@ -13,5 +13,5 @@ where
 
 #[test]
 fn test() {
-    require_not_equal(A, B);
+    require_not_equal::<A, B>();
 }

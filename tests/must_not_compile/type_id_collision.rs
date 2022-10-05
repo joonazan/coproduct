@@ -1,17 +1,14 @@
-use coproduct::{
-    type_inequality::{self, IdType},
-    Coproduct, Merge, MkUnion,
-};
+use coproduct::{type_inequality::IdType, Coproduct, Merge, MkUnion};
 
 struct A;
 impl IdType for A {
-    type Id = type_inequality::Zero<type_inequality::End>;
+    const ID: u64 = 0;
 }
 
 struct B;
 impl IdType for B {
     // same Id as A!
-    type Id = type_inequality::Zero<type_inequality::End>;
+    const ID: u64 = 0;
 }
 
 type C<Ds> = <MkUnion!(A) as Merge<MkUnion!(B), Ds>>::Merged;

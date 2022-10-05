@@ -1,17 +1,17 @@
 use coproduct::{
     merge::{Append, Present},
-    type_inequality::{self, IdType},
+    type_inequality::IdType,
     Coproduct, Here, MkUnion, There,
 };
 
 struct A;
 impl IdType for A {
-    type Id = type_inequality::Zero<type_inequality::End>;
+    const ID: u64 = 0;
 }
 
 struct B;
 impl IdType for B {
-    type Id = type_inequality::One<type_inequality::End>;
+    const ID: u64 = 1;
 }
 
 type C = <MkUnion!(A, B) as Append<A, Present<There<Here>>>>::Extended;

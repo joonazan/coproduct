@@ -1,13 +1,11 @@
-error[E0277]: the trait bound `coproduct::type_inequality::End: type_inequality::IdNotEqual<coproduct::type_inequality::End>` is not satisfied
-  --> tests/must_not_compile/append1.rs:20:22
+error[E0271]: type mismatch resolving `<A as type_inequality::Compare<A>>::EQUAL == false`
+  --> tests/must_not_compile/append1.rs:15:22
    |
-20 |     let _: Coproduct<C> = coproduct::inject(A);
-   |                      ^ the trait `type_inequality::IdNotEqual<coproduct::type_inequality::End>` is not implemented for `coproduct::type_inequality::End`
+15 |     let _: Coproduct<C> = coproduct::inject(A);
+   |                      ^ expected `true`, found `false`
    |
-   = help: the following other types implement trait `type_inequality::IdNotEqual<Other>`:
-             <coproduct::type_inequality::End as type_inequality::IdNotEqual<One<X>>>
-             <coproduct::type_inequality::End as type_inequality::IdNotEqual<coproduct::type_inequality::Zero<X>>>
-   = note: required for `coproduct::type_inequality::Zero<coproduct::type_inequality::End>` to implement `type_inequality::IdNotEqual<coproduct::type_inequality::Zero<coproduct::type_inequality::End>>`
+   = note: expected constant `true`
+              found constant `false`
    = note: required for `A` to implement `NotEqual<A>`
    = note: required for `coproduct::Union<A, EmptyUnion>` to implement `merge::DoesNotContain<A>`
    = note: required for `coproduct::Union<A, EmptyUnion>` to implement `Append<A, coproduct::merge::NotPresent>`

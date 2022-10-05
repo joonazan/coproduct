@@ -1,6 +1,6 @@
 pub trait NotEqual<Other> {}
 
-impl<Other: IdType, T: IdType> NotEqual<Other> for T where T::Id: IdNotEqual<Other::Id> {}
+impl<T: IdType, U: IdType> NotEqual<U> for T where T: Compare<U, EQUAL = false> {}
 
 /// Type-level id used to test type inequality.
 ///
@@ -10,20 +10,38 @@ impl<Other: IdType, T: IdType> NotEqual<Other> for T where T::Id: IdNotEqual<Oth
 /// id will fail to be equal and fail to be not equal.
 /// See `tests/must_not_compile/type_id_collision.rs` for an example.
 pub trait IdType {
-    type Id;
+    const ID: u64;
 }
 
-pub struct End;
-pub struct One<T>(T);
-pub struct Zero<T>(T);
+trait Compare<T> {
+    const EQUAL: bool;
+}
 
-trait IdNotEqual<Other> {}
+impl<T: IdType, U: IdType> Compare<T> for U {
+    const EQUAL: bool = T::ID == U::ID;
+}
 
-impl<X> IdNotEqual<End> for One<X> {}
-impl<X> IdNotEqual<End> for Zero<X> {}
-impl<X> IdNotEqual<One<X>> for End {}
-impl<X> IdNotEqual<Zero<X>> for End {}
-impl<A, B> IdNotEqual<One<A>> for Zero<B> {}
-impl<A, B> IdNotEqual<Zero<A>> for One<B> {}
-impl<A, B> IdNotEqual<One<A>> for One<B> where B: IdNotEqual<A> {}
-impl<A, B> IdNotEqual<Zero<A>> for Zero<B> where B: IdNotEqual<A> {}
+#[cfg(test)]
+mod tests {
+    use super::*;
+    struct A;
+    impl IdType for A {
+        const ID: u64 = 0;
+    }
+
+    struct B;
+    impl IdType for B {
+        const ID: u64 = 1;
+    }
+
+    fn require_not_equal<A, B>()
+    where
+        A: NotEqual<B>,
+    {
+    }
+
+    #[test]
+    fn testy() {
+        require_not_equal::<A, B>();
+    }
+}
