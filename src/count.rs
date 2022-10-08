@@ -6,6 +6,7 @@ pub trait Count {
 }
 
 impl Count for Here {
+    #[inline]
     fn count() -> u32 {
         0
     }

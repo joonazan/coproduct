@@ -1,6 +1,6 @@
 [package]
 name = "coproduct"
-version = "0.4.0"
+version = "0.4.1"
 edition = "2021"
 authors = ["Joonatan Saarhelo <joon.saar@gmail.com>"]
 description = "Generic coproduct type with minimal memory footprint"

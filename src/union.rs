@@ -51,6 +51,7 @@ impl<H: Clone, T: IndexedClone> IndexedClone for Union<H, T> {
 }
 
 impl IndexedClone for EmptyUnion {
+    #[inline]
     unsafe fn iclone(&self, _: u32) -> Self {
         match *self {}
     }
@@ -74,6 +75,7 @@ impl<H: core::fmt::Debug, T: IndexedDebug> IndexedDebug for Union<H, T> {
 }
 
 impl IndexedDebug for EmptyUnion {
+    #[inline]
     unsafe fn ifmt(&self, _: &mut core::fmt::Formatter<'_>, _: u32) -> core::fmt::Result {
         match *self {}
     }
@@ -90,6 +92,7 @@ impl<H, T: IndexedDrop> IndexedDrop for Union<H, T> {
 }
 
 impl IndexedDrop for EmptyUnion {
+    #[inline]
     unsafe fn idrop(&mut self, _: u32) {
         match *self {}
     }
@@ -115,6 +118,7 @@ impl<H: PartialEq, T: IndexedEq> IndexedEq for Union<H, T> {
 }
 
 impl IndexedEq for EmptyUnion {
+    #[inline]
     unsafe fn ieq(&self, _: &Self, _: u32) -> bool {
         match *self {}
     }
