@@ -4,6 +4,7 @@ use crate::{
     union::{union_transmute, IndexedClone, IndexedDebug, IndexedEq},
     EmptyUnion, Union,
 };
+use core::hint::unreachable_unchecked;
 use core::mem::ManuallyDrop;
 
 #[cfg(feature = "type_inequality_hack")]
@@ -69,6 +70,30 @@ where
     type Pruned = LeakingCoproduct<U::Pruned>;
 }
 
+trait IndexList {
+    /// # Safety
+    /// Calling this function with an out of bounds index causes undefined
+    /// behaviour.
+    unsafe fn count_at(i: u32) -> u32;
+}
+
+impl IndexList for EmptyUnion {
+    #[inline]
+    unsafe fn count_at(_: u32) -> u32 {
+        unreachable_unchecked()
+    }
+}
+
+impl<H: Count, T: IndexList> IndexList for Union<H, T> {
+    unsafe fn count_at(i: u32) -> u32 {
+        if i == 0 {
+            H::count()
+        } else {
+            T::count_at(i - 1)
+        }
+    }
+}
+
 /// Implemented on Coproducts that Source can be embedded into.
 pub trait Embed<Target, Indices> {
     fn embed(self) -> Target;
@@ -80,16 +105,17 @@ impl<Res> Embed<Res, EmptyUnion> for LeakingCoproduct<EmptyUnion> {
     }
 }
 
-impl<Res, IH, IT, H, T> Embed<Res, Union<IH, IT>> for LeakingCoproduct<Union<H, T>>
+impl<Res, IH, IT, H, T> Embed<LeakingCoproduct<Res>, Union<IH, IT>>
+    for LeakingCoproduct<Union<H, T>>
 where
-    Res: At<IH, H>,
-    IH: Count,
-    LeakingCoproduct<T>: Embed<Res, IT>,
+    Res: UnionAt<IH, H>,
+    Union<IH, IT>: IndexList,
+    LeakingCoproduct<T>: Embed<LeakingCoproduct<Res>, IT>,
 {
-    fn embed(self) -> Res {
-        match self.take_head() {
-            Ok(x) => Res::inject(x),
-            Err(x) => x.embed(),
+    fn embed(self) -> LeakingCoproduct<Res> {
+        LeakingCoproduct {
+            tag: unsafe { Union::count_at(self.tag) },
+            union: unsafe { union_transmute(self.union) },
         }
     }
 }
