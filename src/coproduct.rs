@@ -120,7 +120,7 @@ where
     }
 }
 
-pub trait Split<Selection, Indices>: Sized {
+pub trait Split<Selection, Indices> {
     type Remainder;
 
     /// Extract a subset of the possible types in a coproduct (or get the remaining possibilities)
@@ -133,7 +133,7 @@ where
     ToSplit: At<NHead, THead, Pruned = Rem>,
     Rem: Split<LeakingCoproduct<TTail>, NTail>,
 {
-    type Remainder = <Rem as Split<LeakingCoproduct<TTail>, NTail>>::Remainder;
+    type Remainder = Rem::Remainder;
 
     fn split(self) -> Result<LeakingCoproduct<Union<THead, TTail>>, Self::Remainder> {
         match self.uninject() {
