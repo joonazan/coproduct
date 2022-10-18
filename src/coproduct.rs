@@ -394,4 +394,13 @@ mod tests {
         let widened: Coproduct!(u8, u16, u32, u64) = c.clone().embed();
         assert_eq!(Ok(c), widened.split())
     }
+
+    #[test]
+    fn double_free() {
+        let c: Coproduct!(u8, Box<u16>) = Coproduct::inject(Box::new(42u16));
+        let _d = match c.uninject::<_, u8>() {
+            Ok(_) => unreachable!(),
+            Err(d) => d,
+        };
+    }
 }
