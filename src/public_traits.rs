@@ -1,3 +1,5 @@
+use core::any::TypeId;
+
 /// Trait for properly deallocating Unions that are not Copy.
 ///
 /// Unlike the other Indexed* traits, this one is exported because there is no
@@ -5,9 +7,8 @@
 /// to require that `Coproduct<T>` is [Clone].
 pub trait IndexedDrop {
     /// # Safety
-    /// The argument `i` must be the index of the active variant
-    /// of the Union.
-    unsafe fn idrop(&mut self, i: u32);
+    /// The argument `i` must be the type id of the type stored in the Union.
+    unsafe fn idrop(&mut self, i: TypeId);
 }
 
 /// This trait is implemented for Unions where variant I has type X.
@@ -24,3 +25,6 @@ pub trait UnionAt<I, X> {
     /// The coproduct minus its Ith variant
     type Pruned;
 }
+
+pub struct Here;
+pub struct There<T>(T);

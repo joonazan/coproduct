@@ -1,10 +1,9 @@
 use crate::{
-    count::Count,
     public_traits::*,
     union::{union_transmute, IndexedClone, IndexedDebug, IndexedEq},
     EmptyUnion, Union,
 };
-use core::hint::unreachable_unchecked;
+use core::any::TypeId;
 use core::mem::ManuallyDrop;
 
 #[cfg(feature = "type_inequality_hack")]
@@ -15,7 +14,7 @@ use crate::Merge;
 /// Do not use directly. Its only purpose is to avoid duplicating methods
 /// for Copy and non-Copy coproducts.
 struct LeakingCoproduct<T> {
-    tag: u32,
+    tag: TypeId,
     union: T,
 }
 
@@ -39,59 +38,29 @@ pub trait At<I, X> {
     type Pruned;
 }
 
-impl<I, X, U> At<I, X> for LeakingCoproduct<U>
+impl<I, X: 'static, U> At<I, X> for LeakingCoproduct<U>
 where
     U: UnionAt<I, X>,
-    I: Count,
 {
     fn inject(x: X) -> Self {
         Self {
-            tag: I::count(),
+            tag: TypeId::of::<X>(),
             union: U::inject(x),
         }
     }
 
     fn uninject(self) -> Result<X, Self::Pruned> {
-        if self.tag == I::count() {
+        if self.tag == TypeId::of::<X>() {
             Ok(unsafe { self.union.take() })
         } else {
-            let tag = if self.tag < I::count() {
-                self.tag
-            } else {
-                self.tag - 1
-            };
             Err(LeakingCoproduct {
-                tag,
+                tag: self.tag,
                 union: unsafe { union_transmute(self.union) },
             })
         }
     }
 
     type Pruned = LeakingCoproduct<U::Pruned>;
-}
-
-trait IndexList {
-    /// # Safety
-    /// Calling this function with an out of bounds index causes undefined
-    /// behaviour.
-    unsafe fn count_at(i: u32) -> u32;
-}
-
-impl IndexList for EmptyUnion {
-    #[inline]
-    unsafe fn count_at(_: u32) -> u32 {
-        unreachable_unchecked()
-    }
-}
-
-impl<H: Count, T: IndexList> IndexList for Union<H, T> {
-    unsafe fn count_at(i: u32) -> u32 {
-        if i == 0 {
-            H::count()
-        } else {
-            T::count_at(i - 1)
-        }
-    }
 }
 
 /// Implemented on Coproducts that Source can be embedded into.
@@ -109,12 +78,11 @@ impl<Res, IH, IT, H, T> Embed<LeakingCoproduct<Res>, Union<IH, IT>>
     for LeakingCoproduct<Union<H, T>>
 where
     Res: UnionAt<IH, H>,
-    Union<IH, IT>: IndexList,
     LeakingCoproduct<T>: Embed<LeakingCoproduct<Res>, IT>,
 {
     fn embed(self) -> LeakingCoproduct<Res> {
         LeakingCoproduct {
-            tag: unsafe { Union::count_at(self.tag) },
+            tag: self.tag,
             union: unsafe { union_transmute(self.union) },
         }
     }
@@ -127,7 +95,7 @@ pub trait Split<Selection, Indices> {
     fn split(self) -> Result<Selection, Self::Remainder>;
 }
 
-impl<ToSplit, THead, TTail, NHead: Count, NTail, Rem>
+impl<ToSplit, THead: 'static, TTail, NHead, NTail, Rem>
     Split<LeakingCoproduct<Union<THead, TTail>>, Union<NHead, NTail>> for ToSplit
 where
     ToSplit: At<NHead, THead, Pruned = Rem>,
@@ -139,7 +107,7 @@ where
         match self.uninject() {
             Ok(found) => Ok(LeakingCoproduct::inject(found)),
             Err(rest) => rest.split().map(|subset| LeakingCoproduct {
-                tag: subset.tag + 1,
+                tag: subset.tag,
                 union: Union {
                     tail: ManuallyDrop::new(subset.union),
                 },
@@ -157,13 +125,13 @@ impl<ToSplit> Split<LeakingCoproduct<EmptyUnion>, EmptyUnion> for ToSplit {
     }
 }
 
-impl<H, T> LeakingCoproduct<Union<H, T>> {
+impl<H: 'static, T> LeakingCoproduct<Union<H, T>> {
     fn take_head(self) -> Result<H, LeakingCoproduct<T>> {
-        if self.tag == 0 {
+        if self.tag == TypeId::of::<H>() {
             Ok(ManuallyDrop::into_inner(unsafe { self.union.head }))
         } else {
             Err(LeakingCoproduct {
-                tag: self.tag - 1,
+                tag: self.tag,
                 union: ManuallyDrop::into_inner(unsafe { self.union.tail }),
             })
         }
@@ -181,11 +149,10 @@ trait CoproductWrapper<T> {
 
 macro_rules! define_methods {
     ($type: ident, $trait: ident) => {
-        impl<I, X, U: $trait> At<I, X> for $type<U>
+        impl<I, X: 'static, U: $trait> At<I, X> for $type<U>
         where
             U: UnionAt<I, X>,
             U::Pruned: $trait,
-            I: Count,
         {
             fn inject(x: X) -> Self {
                 $type(LeakingCoproduct::inject(x))
@@ -256,7 +223,7 @@ macro_rules! define_methods {
             }
         }
 
-        impl<H, T> $type<Union<H, T>>
+        impl<H: 'static, T> $type<Union<H, T>>
         where
             Union<H, T>: $trait,
             T: $trait,

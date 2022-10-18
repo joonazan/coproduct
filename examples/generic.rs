@@ -1,10 +1,10 @@
-use coproduct::{At, Coproduct, CopyableCoproduct, Count, Embed, IndexedDrop, Union};
+use coproduct::{At, Coproduct, CopyableCoproduct, Embed, IndexedDrop, Union};
 
 trait Prepend<T> {
     type With;
 }
 
-impl<T, U: IndexedDrop> Prepend<T> for Coproduct<U> {
+impl<T: 'static, U: IndexedDrop> Prepend<T> for Coproduct<U> {
     type With = Coproduct<Union<T, U>>;
 }
 
@@ -17,7 +17,6 @@ where
     C: At<I, u8>,
     C::Pruned: Prepend<u32> + Embed<<<C as At<I, u8>>::Pruned as Prepend<u32>>::With, Indices>,
     <<C as At<I, u8>>::Pruned as Prepend<u32>>::With: At<J, u32>,
-    I: Count,
 {
     match c.uninject() {
         Ok(x) => coproduct::inject(x as u32),

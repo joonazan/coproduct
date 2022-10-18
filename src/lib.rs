@@ -5,7 +5,7 @@
 //!
 //! For instance, the below function takes any coproduct that may contain a cat.
 //! ```
-//! # use coproduct::{Coproduct, Count, IndexedDrop};
+//! # use coproduct::{Coproduct, IndexedDrop};
 //! # struct Cat;
 //! fn is_cat<C, I>(maybe_cat: C) -> bool
 //! where
@@ -28,12 +28,10 @@
 //! unsafe.
 
 mod coproduct;
-mod count;
 mod public_traits;
 mod union;
 
 pub use crate::coproduct::*;
-pub use count::*;
 pub use public_traits::*;
 pub use union::{EmptyUnion, Union};
 
