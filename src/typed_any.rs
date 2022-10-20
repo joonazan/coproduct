@@ -1,40 +1,41 @@
-use crate::{At, Embed, EmptyUnion, Here, Split, Union, UnionAt};
+use crate::{Embed, EmptyUnion, Here, Split, Union, UnionAt};
 use core::any::Any;
 use core::fmt::{Debug, Formatter};
 use core::hint::unreachable_unchecked;
 use core::marker::PhantomData;
 use std::any::TypeId;
+use std::marker::Unsize;
 
-#[repr(transparent)]
-pub struct TypedAny<T> {
-    types: PhantomData<T>,
-    data: dyn Any,
+pub type TypedAny<T> = Typed<T, dyn Any>;
+
+pub struct Typed<Dom, T: ?Sized> {
+    types: PhantomData<Dom>,
+    type_id: TypeId,
+    data: T,
 }
 
-unsafe fn from_any_ref<T>(x: &dyn Any) -> &TypedAny<T> {
-    &*(x as *const dyn Any as *const TypedAny<T>)
+impl<Dom, T: 'static> Typed<Dom, T> {
+    pub fn new<I>(x: T) -> Self
+    where
+        Dom: UnionAt<I, T>,
+    {
+        Self {
+            types: PhantomData,
+            type_id: TypeId::of::<T>(),
+            data: x,
+        }
+    }
+
+    pub fn any_ref(&self) -> &TypedAny<Dom>
+    where
+        Typed<Dom, T>: Unsize<TypedAny<Dom>>,
+    {
+        self
+    }
 }
 
 unsafe fn change_variants<T, U>(x: &TypedAny<T>) -> &TypedAny<U> {
     &*(x as *const TypedAny<T> as *const TypedAny<U>)
-}
-
-impl<'a, I, X: 'static, T> At<I, &'a X> for &'a TypedAny<T>
-where
-    T: UnionAt<I, X>,
-    T::Pruned: 'a,
-{
-    fn inject(x: &'a X) -> Self {
-        unsafe { from_any_ref(x) }
-    }
-
-    fn uninject(self) -> Result<&'a X, Self::Pruned> {
-        self.data
-            .downcast_ref()
-            .ok_or_else(|| unsafe { change_variants(self) })
-    }
-
-    type Pruned = &'a TypedAny<T::Pruned>;
 }
 
 impl TypedAny<EmptyUnion> {
@@ -84,7 +85,7 @@ where
     type Remainder = &'a TypedAny<Rem>;
 
     fn split(self) -> Result<&'a TypedAny<Types>, Self::Remainder> {
-        if Types::contain_typeid(self.data.type_id()) {
+        if Types::contain_typeid(self.type_id) {
             Ok(unsafe { change_variants(self) })
         } else {
             Err(unsafe { change_variants(self) })
@@ -147,11 +148,15 @@ impl<T> TypedAny<T> {
     /// If the coproduct contains an X, returns that value.
     /// Otherwise, returns the same coproduct, refined to indicate
     /// that it cannot contain X.
-    pub fn uninject<'a, I, X>(&'a self) -> Result<&'a X, <&'a Self as At<I, &'a X>>::Pruned>
+    pub fn uninject<'a, I, X: 'static>(&'a self) -> Result<&'a X, &'a TypedAny<T::Pruned>>
     where
-        &'a Self: At<I, &'a X>,
+        T: UnionAt<I, X>,
     {
-        <&'a Self as At<I, &X>>::uninject(self)
+        if self.type_id == TypeId::of::<X>() {
+            Ok(unsafe { self.data.downcast_ref_unchecked() })
+        } else {
+            Err(unsafe { change_variants(self) })
+        }
     }
 
     /// Convert a coproduct into another with more variants.
@@ -185,17 +190,19 @@ macro_rules! TypedAny {
 
 #[cfg(test)]
 mod tests {
-    use crate::{Split, TypedAny};
+    use crate::{Split, Typed, TypedAny};
 
     #[test]
     fn inject_uninject() {
-        let c: &TypedAny!(u8) = crate::inject(&47);
+        let storage = Typed::new(47);
+        let c: &TypedAny!(u8) = storage.any_ref();
         assert_eq!(c.uninject(), Ok(&47));
     }
 
     #[test]
     fn embed_split() {
-        let c: &TypedAny!(u8, u16) = crate::inject(&42u16);
+        let storage = Typed::new(42u16);
+        let c: &TypedAny!(u8, u16) = storage.any_ref();
         let widened: &TypedAny!(u8, u16, u32, u64) = c.embed();
         assert_eq!(Ok(c), widened.split())
     }

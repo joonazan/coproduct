@@ -1,5 +1,7 @@
 #![cfg_attr(feature = "type_inequality_hack", feature(associated_const_equality))]
 #![cfg_attr(feature = "type_inequality_hack", feature(const_type_id))]
+#![feature(unsize)]
+#![feature(downcast_unchecked)]
 //! Rust enums are coproducts but the datastructure provided in this library
 //! allows writing functions that operate on generic coproducts.
 //!
