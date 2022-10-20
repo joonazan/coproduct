@@ -29,10 +29,12 @@
 
 mod coproduct;
 mod public_traits;
+mod typed_any;
 mod union;
 
 pub use crate::coproduct::*;
 pub use public_traits::*;
+pub use typed_any::*;
 pub use union::{EmptyUnion, Union};
 
 #[cfg(feature = "type_inequality_hack")]
