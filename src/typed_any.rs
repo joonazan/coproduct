@@ -52,28 +52,55 @@ impl<'a, Res> Embed<&'a TypedAny<Res>, EmptyUnion> for &'a TypedAny<EmptyUnion> 
     }
 }
 
-impl<'a, ToSplit, THead: 'static, TTail, NHead, NTail, Rem>
-    Split<&'a TypedAny<Union<THead, TTail>>, Union<NHead, NTail>> for ToSplit
-where
-    ToSplit: At<NHead, &'a THead, Pruned = Rem>,
-    Rem: Split<&'a TypedAny<TTail>, NTail>,
-{
-    type Remainder = Rem::Remainder;
+pub trait Splittable<Types, Indices> {
+    type Remains;
+}
 
-    fn split(self) -> Result<&'a TypedAny<Union<THead, TTail>>, Self::Remainder> {
-        match self.uninject() {
-            Ok(found) => Ok(crate::inject(found)),
-            Err(rest) => rest.split().map(|x| unsafe { transmute(x) }),
+impl<H, T, IH, IT, ToSplit, Rem> Splittable<Union<H, T>, Union<IH, IT>> for ToSplit
+where
+    ToSplit: UnionAt<IH, H, Pruned = Rem>,
+    Rem: Splittable<T, IT>,
+{
+    type Remains = Rem::Remains;
+}
+
+impl<ToSplit> Splittable<EmptyUnion, EmptyUnion> for ToSplit {
+    type Remains = Self;
+}
+
+impl<'a, ToSplit, Types, Indices, Rem> Split<&'a TypedAny<Types>, Indices> for &'a TypedAny<ToSplit>
+where
+    Types: TypeIn,
+    ToSplit: Splittable<Types, Indices, Remains = Rem>,
+    Rem: 'a,
+{
+    type Remainder = &'a TypedAny<Rem>;
+
+    fn split(self) -> Result<&'a TypedAny<Types>, Self::Remainder> {
+        if Types::type_in(self) {
+            Ok(unsafe { transmute(self) })
+        } else {
+            Err(unsafe { transmute(self) })
         }
     }
 }
 
-impl<'a, ToSplit> Split<&'a TypedAny<EmptyUnion>, EmptyUnion> for ToSplit {
-    type Remainder = Self;
+trait TypeIn {
+    fn type_in<T>(c: &TypedAny<T>) -> bool;
+}
 
-    #[inline]
-    fn split(self) -> Result<&'a TypedAny<EmptyUnion>, Self::Remainder> {
-        Err(self)
+impl<H: 'static, T> TypeIn for Union<H, T>
+where
+    T: TypeIn,
+{
+    fn type_in<U>(c: &TypedAny<U>) -> bool {
+        c.data.is::<H>() || T::type_in(c)
+    }
+}
+
+impl TypeIn for EmptyUnion {
+    fn type_in<T>(_: &TypedAny<T>) -> bool {
+        false
     }
 }
 
@@ -127,6 +154,7 @@ impl<T> TypedAny<T> {
         <&'a Self as Embed<U, I>>::embed(self)
     }
 
+    /* has broken type inference due to a compiler bug
     /// Split a coproduct into two disjoint sets. Returns the active one.
     pub fn split<'a, U: ?Sized, I>(
         &'a self,
@@ -136,6 +164,7 @@ impl<T> TypedAny<T> {
     {
         <&'a Self as Split<&'a U, I>>::split(self)
     }
+    */
 }
 
 /// Builds a [TypedAny] that can hold the types given as arguments.
@@ -148,6 +177,7 @@ macro_rules! TypedAny {
 
 #[cfg(test)]
 mod tests {
+    use crate::{Split, TypedAny};
 
     #[test]
     fn inject_uninject() {
