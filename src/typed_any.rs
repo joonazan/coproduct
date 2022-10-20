@@ -3,6 +3,7 @@ use core::fmt::{Debug, Formatter};
 use core::hint::unreachable_unchecked;
 use core::marker::PhantomData;
 use core::{any::Any, mem::transmute};
+use std::any::TypeId;
 
 #[repr(transparent)]
 pub struct TypedAny<T> {
@@ -77,7 +78,7 @@ where
     type Remainder = &'a TypedAny<Rem>;
 
     fn split(self) -> Result<&'a TypedAny<Types>, Self::Remainder> {
-        if Types::type_in(self) {
+        if Types::contain_typeid(self.data.type_id()) {
             Ok(unsafe { transmute(self) })
         } else {
             Err(unsafe { transmute(self) })
@@ -86,20 +87,21 @@ where
 }
 
 trait TypeIn {
-    fn type_in<T>(c: &TypedAny<T>) -> bool;
+    fn contain_typeid(id: TypeId) -> bool;
 }
 
 impl<H: 'static, T> TypeIn for Union<H, T>
 where
     T: TypeIn,
 {
-    fn type_in<U>(c: &TypedAny<U>) -> bool {
-        c.data.is::<H>() || T::type_in(c)
+    fn contain_typeid(id: TypeId) -> bool {
+        id == TypeId::of::<H>() || T::contain_typeid(id)
     }
 }
 
 impl TypeIn for EmptyUnion {
-    fn type_in<T>(_: &TypedAny<T>) -> bool {
+    #[inline]
+    fn contain_typeid(_: TypeId) -> bool {
         false
     }
 }
