@@ -1,8 +1,8 @@
 use crate::{At, Embed, EmptyUnion, Here, Split, Union, UnionAt};
+use core::any::Any;
 use core::fmt::{Debug, Formatter};
 use core::hint::unreachable_unchecked;
 use core::marker::PhantomData;
-use core::{any::Any, mem::transmute};
 use std::any::TypeId;
 
 #[repr(transparent)]
@@ -12,7 +12,11 @@ pub struct TypedAny<T> {
 }
 
 unsafe fn from_any_ref<T>(x: &dyn Any) -> &TypedAny<T> {
-    transmute(x)
+    &*(x as *const dyn Any as *const TypedAny<T>)
+}
+
+unsafe fn change_variants<T, U>(x: &TypedAny<T>) -> &TypedAny<U> {
+    &*(x as *const TypedAny<T> as *const TypedAny<U>)
 }
 
 impl<'a, I, X: 'static, T> At<I, &'a X> for &'a TypedAny<T>
@@ -25,7 +29,9 @@ where
     }
 
     fn uninject(self) -> Result<&'a X, Self::Pruned> {
-        self.data.downcast_ref().ok_or(unsafe { transmute(self) })
+        self.data
+            .downcast_ref()
+            .ok_or_else(|| unsafe { change_variants(self) })
     }
 
     type Pruned = &'a TypedAny<T::Pruned>;
@@ -43,7 +49,7 @@ where
     &'a TypedAny<T>: Embed<&'a TypedAny<Res>, IT>,
 {
     fn embed(self) -> &'a TypedAny<Res> {
-        unsafe { transmute(self) }
+        unsafe { change_variants(self) }
     }
 }
 
@@ -79,9 +85,9 @@ where
 
     fn split(self) -> Result<&'a TypedAny<Types>, Self::Remainder> {
         if Types::contain_typeid(self.data.type_id()) {
-            Ok(unsafe { transmute(self) })
+            Ok(unsafe { change_variants(self) })
         } else {
-            Err(unsafe { transmute(self) })
+            Err(unsafe { change_variants(self) })
         }
     }
 }
