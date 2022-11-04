@@ -1,10 +1,10 @@
 use crate::{Embed, EmptyUnion, Here, Split, Union, UnionAt};
 use core::any::Any;
+use core::any::TypeId;
 use core::fmt::{Debug, Formatter};
 use core::hint::unreachable_unchecked;
 use core::marker::PhantomData;
-use std::any::TypeId;
-use std::marker::Unsize;
+use core::marker::Unsize;
 
 pub type TypedAny<T> = Typed<T, dyn Any>;
 
@@ -133,13 +133,13 @@ impl PartialEq for TypedAny<EmptyUnion> {
 }
 
 impl Debug for TypedAny<EmptyUnion> {
-    fn fmt(&self, _: &mut Formatter<'_>) -> Result<(), std::fmt::Error> {
+    fn fmt(&self, _: &mut Formatter<'_>) -> Result<(), core::fmt::Error> {
         self.ex_falso()
     }
 }
 
 impl<H, T> Debug for TypedAny<Union<H, T>> {
-    fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
+    fn fmt(&self, f: &mut Formatter<'_>) -> core::fmt::Result {
         f.debug_tuple("TypedAny").field(&()).finish()
     }
 }
