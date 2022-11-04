@@ -4,7 +4,6 @@ use core::any::TypeId;
 use core::fmt::{Debug, Formatter};
 use core::hint::unreachable_unchecked;
 use core::marker::PhantomData;
-use core::marker::Unsize;
 
 pub type TypedAny<T> = Typed<T, dyn Any>;
 
@@ -24,13 +23,6 @@ impl<Dom, T: 'static> Typed<Dom, T> {
             type_id: TypeId::of::<T>(),
             data: x,
         }
-    }
-
-    pub fn any_ref(&self) -> &TypedAny<Dom>
-    where
-        Typed<Dom, T>: Unsize<TypedAny<Dom>>,
-    {
-        self
     }
 }
 
@@ -195,14 +187,14 @@ mod tests {
     #[test]
     fn inject_uninject() {
         let storage = Typed::new(47);
-        let c: &TypedAny!(u8) = storage.any_ref();
+        let c: &TypedAny!(u8) = &storage;
         assert_eq!(c.uninject(), Ok(&47));
     }
 
     #[test]
     fn embed_split() {
         let storage = Typed::new(42u16);
-        let c: &TypedAny!(u8, u16) = storage.any_ref();
+        let c: &TypedAny!(u8, u16) = &storage;
         let widened: &TypedAny!(u8, u16, u32, u64) = c.embed();
         assert_eq!(Ok(c), widened.split())
     }
