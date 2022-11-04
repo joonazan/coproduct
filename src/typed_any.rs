@@ -1,9 +1,12 @@
+use crate::At;
 use crate::{Embed, EmptyUnion, Here, Split, Union, UnionAt};
 use core::any::Any;
 use core::any::TypeId;
 use core::fmt::{Debug, Formatter};
 use core::hint::unreachable_unchecked;
 use core::marker::PhantomData;
+use core::mem::transmute;
+use core::ops::Deref;
 
 pub type TypedAny<T> = Typed<T, dyn Any>;
 
@@ -30,6 +33,10 @@ unsafe fn change_variants<T, U>(x: &TypedAny<T>) -> &TypedAny<U> {
     &*(x as *const TypedAny<T> as *const TypedAny<U>)
 }
 
+unsafe fn change_variants_box<T, U>(x: Box<TypedAny<T>>) -> Box<TypedAny<U>> {
+    transmute(x)
+}
+
 impl TypedAny<EmptyUnion> {
     pub fn ex_falso<T>(&self) -> T {
         unsafe { unreachable_unchecked() }
@@ -46,8 +53,21 @@ where
     }
 }
 
-impl<'a, Res> Embed<&'a TypedAny<Res>, EmptyUnion> for &'a TypedAny<EmptyUnion> {
-    fn embed(self) -> &'a TypedAny<Res> {
+impl<Res, IH, IT, H, T> Embed<Box<TypedAny<Res>>, Union<IH, IT>> for Box<TypedAny<Union<H, T>>>
+where
+    Res: UnionAt<IH, H>,
+    Box<TypedAny<T>>: Embed<Box<TypedAny<Res>>, IT>,
+{
+    fn embed(self) -> Box<TypedAny<Res>> {
+        unsafe { change_variants_box(self) }
+    }
+}
+
+impl<Res, T> Embed<Res, EmptyUnion> for T
+where
+    T: Deref<Target = TypedAny<EmptyUnion>>,
+{
+    fn embed(self) -> Res {
         self.ex_falso()
     }
 }
@@ -81,6 +101,22 @@ where
             Ok(unsafe { change_variants(self) })
         } else {
             Err(unsafe { change_variants(self) })
+        }
+    }
+}
+
+impl<ToSplit, Types, Indices, Rem> Split<Box<TypedAny<Types>>, Indices> for Box<TypedAny<ToSplit>>
+where
+    Types: TypeIn,
+    ToSplit: Splittable<Types, Indices, Remains = Rem>,
+{
+    type Remainder = Box<TypedAny<Rem>>;
+
+    fn split(self) -> Result<Box<TypedAny<Types>>, Self::Remainder> {
+        if Types::contain_typeid(self.type_id) {
+            Ok(unsafe { change_variants_box(self) })
+        } else {
+            Err(unsafe { change_variants_box(self) })
         }
     }
 }
@@ -172,6 +208,25 @@ impl<T> TypedAny<T> {
     */
 }
 
+impl<I, X: 'static, T> At<I, X> for Box<TypedAny<T>>
+where
+    T: UnionAt<I, X>,
+{
+    fn inject(x: X) -> Self {
+        Box::new(Typed::new(x))
+    }
+
+    fn uninject(mut self) -> Result<X, Self::Pruned> {
+        if self.type_id == TypeId::of::<X>() {
+            Ok(unsafe { core::ptr::read(self.data.downcast_mut_unchecked()) })
+        } else {
+            Err(unsafe { change_variants_box(self) })
+        }
+    }
+
+    type Pruned = Box<TypedAny<T::Pruned>>;
+}
+
 /// Builds a [TypedAny] that can hold the types given as arguments.
 #[macro_export]
 macro_rules! TypedAny {
@@ -182,7 +237,7 @@ macro_rules! TypedAny {
 
 #[cfg(test)]
 mod tests {
-    use crate::{Split, Typed, TypedAny};
+    use crate::{At, Embed, Split, Typed, TypedAny};
 
     #[test]
     fn inject_uninject() {
@@ -197,5 +252,23 @@ mod tests {
         let c: &TypedAny!(u8, u16) = &storage;
         let widened: &TypedAny!(u8, u16, u32, u64) = c.embed();
         assert_eq!(Ok(c), widened.split())
+    }
+
+    #[test]
+    fn inject_uninject_box() {
+        let storage = Typed::new(47);
+        let c: Box<TypedAny!(u8)> = Box::new(storage);
+        assert_eq!(c.uninject(), Ok(47));
+    }
+
+    #[test]
+    fn embed_split_box() {
+        let make = || {
+            let storage = Typed::new(42u16);
+            let c: Box<TypedAny!(u8, u16)> = Box::new(storage);
+            c
+        };
+        let widened: Box<TypedAny!(u8, u16, u32, u64)> = make().embed();
+        assert_eq!(Ok(make()), widened.split())
     }
 }

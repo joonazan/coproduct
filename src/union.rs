@@ -9,7 +9,7 @@ pub union Union<A, B> {
     pub(crate) tail: ManuallyDrop<B>,
 }
 
-#[derive(Copy, Clone, Debug)]
+#[derive(Copy, Clone, Debug, PartialEq)]
 pub enum EmptyUnion {}
 
 #[macro_export]
