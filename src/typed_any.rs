@@ -195,17 +195,13 @@ impl<T> TypedAny<T> {
         <&'a Self as Embed<U, I>>::embed(self)
     }
 
-    /* has broken type inference due to a compiler bug
     /// Split a coproduct into two disjoint sets. Returns the active one.
-    pub fn split<'a, U: ?Sized, I>(
-        &'a self,
-    ) -> Result<&'a U, <&'a Self as Split<&'a U, I>>::Remainder>
+    pub fn split<'a, U, I>(&'a self) -> Result<U, <&'a Self as Split<U, I>>::Remainder>
     where
-        &'a Self: Split<&'a U, I>,
+        &'a Self: Split<U, I>,
     {
-        <&'a Self as Split<&'a U, I>>::split(self)
+        <&'a Self as Split<U, I>>::split(self)
     }
-    */
 }
 
 impl<I, X: 'static, T> At<I, X> for Box<TypedAny<T>>
