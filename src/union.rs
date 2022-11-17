@@ -1,4 +1,5 @@
 use core::any::TypeId;
+use core::mem::needs_drop;
 use core::mem::ManuallyDrop;
 
 use crate::{public_traits::*, Here, There};
@@ -80,12 +81,23 @@ impl IndexedDebug for EmptyUnion {
     }
 }
 
-impl<H: 'static, T: IndexedDrop> IndexedDrop for Union<H, T> {
+impl<H: 'static, H2, T2> IndexedDrop for Union<H, Union<H2, T2>>
+where
+    Union<H2, T2>: IndexedDrop,
+{
     unsafe fn idrop(&mut self, i: TypeId) {
-        if i == TypeId::of::<H>() {
+        if needs_drop::<H>() && i == TypeId::of::<H>() {
             ManuallyDrop::drop(&mut self.head)
         } else {
             self.tail.idrop(i)
+        }
+    }
+}
+
+impl<H: 'static> IndexedDrop for Union<H, EmptyUnion> {
+    unsafe fn idrop(&mut self, i: TypeId) {
+        if needs_drop::<H>() && i == TypeId::of::<H>() {
+            ManuallyDrop::drop(&mut self.head)
         }
     }
 }

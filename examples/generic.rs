@@ -4,7 +4,10 @@ trait Prepend<T> {
     type With;
 }
 
-impl<T: 'static, U: IndexedDrop> Prepend<T> for Coproduct<U> {
+impl<T: 'static, U: IndexedDrop> Prepend<T> for Coproduct<U>
+where
+    Union<T, U>: IndexedDrop,
+{
     type With = Coproduct<Union<T, U>>;
 }
 
